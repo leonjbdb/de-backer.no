@@ -3,13 +3,12 @@
 import { useEffect, useState, useRef, useCallback } from "react";
 import { ThemeToggle } from "@/components";
 import { useTheme } from "@/components/providers";
-import { OrbField } from "@/components/OrbField";
+import { OrbField } from "@/components/orb-field";
 
 export default function HomePage() {
-    const [ready, setReady] = useState(false);
     const [stage, setStage] = useState(0);
     const [mousePos, setMousePos] = useState({ x: 0.5, y: 0.5 });
-    const rafRef = useRef<number>();
+    const rafRef = useRef<number | undefined>(undefined);
     const { theme } = useTheme();
 
     const handleMouseMove = useCallback((e: MouseEvent) => {
@@ -24,8 +23,6 @@ export default function HomePage() {
     }, []);
 
     useEffect(() => {
-        setReady(true);
-
         const timer1 = setTimeout(() => setStage(1), 1500);
         const timer2 = setTimeout(() => setStage(2), 6000);
         const timer3 = setTimeout(() => setStage(3), 7500);
@@ -40,17 +37,6 @@ export default function HomePage() {
             if (rafRef.current) cancelAnimationFrame(rafRef.current);
         };
     }, [handleMouseMove]);
-
-    if (!ready) {
-        return (
-            <div style={{
-                position: 'fixed',
-                inset: 0,
-                background: '#000000',
-                zIndex: 9999
-            }} />
-        );
-    }
 
     return (
         <>
@@ -90,6 +76,9 @@ export default function HomePage() {
                     position: relative;
                     z-index: 10;
                     visibility: hidden;
+                    user-select: none;
+                    -webkit-user-select: none;
+                    pointer-events: none;
                 }
                 
                 .greeting.emerging {
