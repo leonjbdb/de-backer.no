@@ -1,12 +1,16 @@
 "use client";
 
-import { LinksCard } from "@/components/liquid-glass/LinksCard";
+import { ContactCard, LinksCard, ProfileCard } from "@/components/liquid-glass";
 
 export default function LiquidGlassPage() {
     return (
         <main className="min-h-screen w-full relative overflow-hidden" style={{ background: '#020c1b', fontFamily: 'var(--font-mono)' }}>
-            {/* Extracted Links Card */}
-            <LinksCard />
+            {/* Contact Card */}
+            <ContactCard />
+
+            {/* Other cards - Temporarily hidden to avoid overlap */}
+            {/* <ProfileCard /> */}
+            {/* <LinksCard /> */}
 
             {/* Background content */}
             <div style={{ padding: "100px 50px", maxWidth: 1000, margin: "0 auto", position: "relative" }}>
