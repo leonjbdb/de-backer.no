@@ -89,7 +89,7 @@ export function LiveGlassCard({
 
     const paddingValue = typeof padding === "number" ? `${padding}px` : padding;
 
-    // Track visibility with a delay to allow fade out transition
+    // Track visibility - hide element shortly after opacity reaches 0
     const [isVisible, setIsVisible] = useState(opacity > 0.01);
     
     useEffect(() => {
@@ -97,10 +97,10 @@ export function LiveGlassCard({
             // Immediately show when opacity increases
             setIsVisible(true);
         } else {
-            // Delay hiding to allow fade out transition
+            // Brief delay to ensure smooth transition completion
             const timer = setTimeout(() => {
                 setIsVisible(false);
-            }, 450); // Slightly longer than the opacity transition
+            }, 100);
             return () => clearTimeout(timer);
         }
     }, [opacity]);
@@ -109,17 +109,19 @@ export function LiveGlassCard({
     const easeOutCubic = (t: number) => 1 - Math.pow(1 - t, 3);
     const easeInCubic = (t: number) => t * t * t;
 
-    // Entry animation: scale from 0.85 to 1, translateY from 60px to 0, rotateX from -8deg to 0
+    // Entry animation: scale from 0.8 to 1, translateY from 150px to 0, rotateX from -12deg to 0
+    // Made more pronounced for visible slide-in effect
     const easedEntry = easeOutCubic(entryProgress);
-    const entryScale = 0.85 + (0.15 * easedEntry);
-    const entryTranslateY = 60 * (1 - easedEntry);
-    const entryRotateX = -8 * (1 - easedEntry);
+    const entryScale = 0.8 + (0.2 * easedEntry);
+    const entryTranslateY = 150 * (1 - easedEntry);
+    const entryRotateX = -12 * (1 - easedEntry);
 
-    // Exit animation: scale from 1 to 0.92, translateY from 0 to -40px, rotateX from 0 to 6deg
+    // Exit animation: scale from 1 to 0.88, translateY from 0 to -100px, rotateX from 0 to 10deg
+    // Made more pronounced to match entry
     const easedExit = easeInCubic(exitProgress);
-    const exitScale = 1 - (0.08 * easedExit);
-    const exitTranslateY = -40 * easedExit;
-    const exitRotateX = 6 * easedExit;
+    const exitScale = 1 - (0.12 * easedExit);
+    const exitTranslateY = -100 * easedExit;
+    const exitRotateX = 10 * easedExit;
 
     // Combine entry and exit animations with mobile scale
     const baseScale = entryScale * exitScale;
@@ -153,7 +155,7 @@ export function LiveGlassCard({
                 opacity: opacity,
                 visibility: isVisible ? "visible" : "hidden",
                 pointerEvents: opacity > 0.01 ? "auto" : "none",
-                transition: "opacity 0.4s ease-in-out",
+                // No CSS transition - JS handles smooth animation via requestAnimationFrame
                 transform: combinedTransform,
                 ...styleWithoutTransform,
             }}

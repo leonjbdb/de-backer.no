@@ -1,0 +1,44 @@
+/* Homepage main styles */
+
+.homepage {
+	min-height: 100vh;
+	display: flex;
+	align-items: center;
+	justify-content: center;
+	position: fixed;
+	inset: 0;
+	background: #000000;
+	transition: background 0.8s ease;
+}
+
+.homepagePopped {
+	background: var(--homepage-bg);
+}
+
+.themeToggleWrapper {
+	opacity: 0;
+	visibility: hidden;
+	transition: opacity 0.5s ease;
+	pointer-events: none;
+	position: relative;
+	z-index: 100;
+}
+
+.themeToggleWrapperVisible {
+	visibility: visible;
+	opacity: 1;
+	pointer-events: auto;
+}
+
+/* Global styles that need to be applied */
+:global(html),
+:global(body) {
+	overflow-x: hidden;
+}
+
+@media (max-width: 767px) {
+	:global(html),
+	:global(body) {
+		overflow: hidden !important;
+	}
+}
