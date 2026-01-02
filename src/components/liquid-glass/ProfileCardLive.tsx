@@ -24,10 +24,10 @@ export function ProfileCardLive({ opacity = 1, entryProgress = 1, exitProgress =
                 transform: "translate(-50%, -50%)",
                 zIndex: 10,
                 maxWidth: "480px",
-                width: "calc(100% - 48px)",
+                width: "calc(100% - 32px)",
                 ...style,
             }}
-            padding={40}
+            padding="clamp(24px, 5vw, 40px)"
             borderRadius={60}
             opacity={opacity}
             entryProgress={entryProgress}

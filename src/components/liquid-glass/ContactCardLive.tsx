@@ -28,9 +28,11 @@ export function ContactCardLive({ opacity = 1, entryProgress = 1, style }: Conta
                 left: "50%",
                 transform: "translate(-50%, -50%)",
                 zIndex: 10,
+                maxWidth: "480px",
+                width: "calc(100% - 32px)",
                 ...style,
             }}
-            padding={30}
+            padding="clamp(16px, 4vw, 30px)"
             borderRadius={60}
             opacity={opacity}
             entryProgress={entryProgress}
