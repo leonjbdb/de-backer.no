@@ -7,10 +7,12 @@ import { useGitHubAvatar } from "@/hooks";
 
 interface ProfileCardLiveProps {
     opacity?: number;
+    entryProgress?: number;
+    exitProgress?: number;
     style?: React.CSSProperties;
 }
 
-export function ProfileCardLive({ opacity = 1, style }: ProfileCardLiveProps) {
+export function ProfileCardLive({ opacity = 1, entryProgress = 1, exitProgress = 0, style }: ProfileCardLiveProps) {
     const { data: avatarUrl } = useGitHubAvatar(siteConfig.identity.githubUserId, 260);
 
     return (
@@ -28,6 +30,8 @@ export function ProfileCardLive({ opacity = 1, style }: ProfileCardLiveProps) {
             padding={40}
             borderRadius={60}
             opacity={opacity}
+            entryProgress={entryProgress}
+            exitProgress={exitProgress}
         >
             <style dangerouslySetInnerHTML={{
                 __html: `

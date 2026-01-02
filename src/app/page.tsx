@@ -5,12 +5,34 @@ import { ThemeToggle } from "@/components";
 import { useTheme } from "@/components/providers";
 import { OrbField } from "@/components/orb-field";
 import { ProfileCardLive } from "@/components/liquid-glass/ProfileCardLive";
+import { LinksCardLive } from "@/components/liquid-glass/LinksCardLive";
+import { ContactCardLive } from "@/components/liquid-glass/ContactCardLive";
+import { ScrollDotIndicator } from "@/components/ui/ScrollDotIndicator";
+
+// Total scroll sections (in viewport heights)
+const TOTAL_SECTIONS = 4;
+
+// Resting points for scroll snap (in viewport heights)
+// These are the "bottom" points where cards are fully visible
+// Index 0 = Profile, 1 = Links, 2 = Contact (no Hi! since it's one-time)
+const RESTING_POINTS = [0.75, 1.75, 2.75];
+
+// Minimum scroll position once greeting is passed (profile card fully visible position)
+const MIN_SCROLL_AFTER_GREETING = 0.75;
+
+// Scroll snap debounce delay (ms) - longer delay for gentler snapping
+const SNAP_DELAY = 500;
 
 export default function HomePage() {
     const [stage, setStage] = useState(0);
     const [mousePos, setMousePos] = useState({ x: 0.5, y: 0.5 });
     const [scrollProgress, setScrollProgress] = useState(0);
+    const [hasPassedGreeting, setHasPassedGreeting] = useState(false);
+    const [activeSection, setActiveSection] = useState(0);
+    const [isJumping, setIsJumping] = useState(false); // For fade transition when clicking dots
     const rafRef = useRef<number | undefined>(undefined);
+    const snapTimeoutRef = useRef<NodeJS.Timeout | undefined>(undefined);
+    const isSnappingRef = useRef(false);
     const { theme } = useTheme();
 
     const handleMouseMove = useCallback((e: MouseEvent) => {
@@ -24,14 +46,155 @@ export default function HomePage() {
         });
     }, []);
 
+    // Smooth scroll to a resting point with parabolic animation for natural feel
+    const scrollToRestingPoint = useCallback((targetProgress: number) => {
+        const viewportHeight = window.innerHeight;
+        const targetScrollY = targetProgress * viewportHeight;
+        const startScrollY = window.scrollY;
+        const distance = targetScrollY - startScrollY;
+        
+        // Don't animate if already very close
+        if (Math.abs(distance) < 5) return;
+        
+        isSnappingRef.current = true;
+        
+        // Duration scales with distance for natural feel
+        // Base: ~2400ms for small distances, up to ~6000ms for large distances
+        const distanceInVh = Math.abs(distance) / viewportHeight;
+        const duration = Math.min(6000, Math.max(2400, distanceInVh * 7500));
+        const startTime = performance.now();
+        
+        const animateScroll = (currentTime: number) => {
+            const elapsed = currentTime - startTime;
+            const progress = Math.min(elapsed / duration, 1);
+            
+            // Parabolic easing: starts slow, accelerates, then decelerates naturally
+            // Like a ball rolling into a valley and settling at the bottom
+            // Using ease-in-out quint for a smooth parabolic feel
+            const eased = progress < 0.5
+                ? 16 * progress * progress * progress * progress * progress
+                : 1 - Math.pow(-2 * progress + 2, 5) / 2;
+            
+            window.scrollTo({
+                top: startScrollY + distance * eased,
+                behavior: 'instant'
+            });
+            
+            if (progress < 1) {
+                requestAnimationFrame(animateScroll);
+            } else {
+                isSnappingRef.current = false;
+            }
+        };
+        
+        requestAnimationFrame(animateScroll);
+    }, []);
+
+    // Find nearest resting point
+    const findNearestRestingPoint = useCallback((progress: number): number => {
+        // All resting points are for the 3 cards (Profile, Links, Contact)
+        let nearest = RESTING_POINTS[0];
+        let minDistance = Math.abs(progress - nearest);
+        
+        for (const point of RESTING_POINTS) {
+            const distance = Math.abs(progress - point);
+            if (distance < minDistance) {
+                minDistance = distance;
+                nearest = point;
+            }
+        }
+        
+        return nearest;
+    }, []);
+
     // Handle scroll for fade transitions
     const handleScroll = useCallback(() => {
         const scrollY = window.scrollY;
         const viewportHeight = window.innerHeight;
-        // Progress from 0 to 1 over the first viewport height of scrolling
-        const progress = Math.min(1, Math.max(0, scrollY / viewportHeight));
+        // Progress in viewport heights (0 to TOTAL_SECTIONS)
+        let progress = scrollY / viewportHeight;
+        
+        // Mark greeting as passed once user reaches the profile card's fully visible position
+        if (progress >= 0.7 && !hasPassedGreeting) {
+            setHasPassedGreeting(true);
+        }
+        
+        // Prevent scrolling above the minimum position when greeting is passed
+        if (hasPassedGreeting && progress < MIN_SCROLL_AFTER_GREETING) {
+            window.scrollTo({
+                top: MIN_SCROLL_AFTER_GREETING * viewportHeight,
+                behavior: 'instant'
+            });
+            progress = MIN_SCROLL_AFTER_GREETING;
+        }
+        
         setScrollProgress(progress);
-    }, []);
+        
+        // Determine active section for dot indicator (3 sections: Profile=0, Links=1, Contact=2)
+        if (progress < 1.25) {
+            setActiveSection(0); // Profile
+        } else if (progress < 2.25) {
+            setActiveSection(1); // Links
+        } else {
+            setActiveSection(2); // Contact
+        }
+        
+        // Clear any existing snap timeout
+        if (snapTimeoutRef.current) {
+            clearTimeout(snapTimeoutRef.current);
+        }
+        
+        // Don't snap if we're currently in a snap animation
+        if (isSnappingRef.current) return;
+        
+        // Set up snap timeout - will trigger after user stops scrolling
+        snapTimeoutRef.current = setTimeout(() => {
+            let currentProgress = window.scrollY / window.innerHeight;
+            
+            // Enforce minimum scroll position
+            if (hasPassedGreeting && currentProgress < MIN_SCROLL_AFTER_GREETING) {
+                currentProgress = MIN_SCROLL_AFTER_GREETING;
+            }
+            
+            const nearestPoint = findNearestRestingPoint(currentProgress);
+            
+            // Only snap if we're not already at the resting point
+            if (Math.abs(currentProgress - nearestPoint) > 0.08) {
+                scrollToRestingPoint(nearestPoint);
+            }
+        }, SNAP_DELAY);
+    }, [hasPassedGreeting, findNearestRestingPoint, scrollToRestingPoint]);
+
+    // Handle dot click navigation (3 dots for Profile, Links, Contact)
+    // Fade out current card, jump, then fade in new card
+    const handleDotClick = useCallback((index: number) => {
+        const targetProgress = RESTING_POINTS[index];
+        const viewportHeight = window.innerHeight;
+        
+        // Don't do anything if already jumping or clicking current section
+        if (isJumping || index === activeSection) return;
+        
+        // Clear any pending snap
+        if (snapTimeoutRef.current) {
+            clearTimeout(snapTimeoutRef.current);
+        }
+        
+        // Start fade out
+        setIsJumping(true);
+        
+        // After fade out completes, jump to new position
+        setTimeout(() => {
+            window.scrollTo({
+                top: targetProgress * viewportHeight,
+                behavior: 'instant'
+            });
+            
+            // Wait a moment then fade in the new card
+            setTimeout(() => {
+                setIsJumping(false);
+            }, 100);
+        }, 400); // Wait for fade out to complete
+    }, [activeSection, isJumping]);
 
     useEffect(() => {
         const timer1 = setTimeout(() => setStage(1), 1500);
@@ -46,6 +209,7 @@ export default function HomePage() {
             clearTimeout(timer3);
             window.removeEventListener('mousemove', handleMouseMove);
             if (rafRef.current) cancelAnimationFrame(rafRef.current);
+            if (snapTimeoutRef.current) clearTimeout(snapTimeoutRef.current);
         };
     }, [handleMouseMove]);
 
@@ -54,7 +218,7 @@ export default function HomePage() {
         if (stage >= 3) {
             // Enable scrolling by directly setting body overflow and min-height
             document.body.style.overflowY = 'auto';
-            document.body.style.minHeight = '200vh';
+            document.body.style.minHeight = `${TOTAL_SECTIONS * 100}vh`;
             document.documentElement.style.overflowY = 'auto';
             
             window.addEventListener('scroll', handleScroll);
@@ -62,7 +226,7 @@ export default function HomePage() {
             const rafId = requestAnimationFrame(() => {
                 const scrollY = window.scrollY;
                 const viewportHeight = window.innerHeight;
-                const progress = Math.min(1, Math.max(0, scrollY / viewportHeight));
+                const progress = scrollY / viewportHeight;
                 setScrollProgress(progress);
             });
             return () => {
@@ -78,9 +242,39 @@ export default function HomePage() {
         }
     }, [stage, handleScroll]);
 
-    // Calculate opacities based on scroll progress
-    const greetingOpacity = 1 - scrollProgress;
-    const profileCardOpacity = scrollProgress;
+    // Calculate section-based visibility and animations with spacing
+    // New scroll zones with dead space between cards:
+    // Section 0-0.3: Hi! visible (fades out 0.2-0.4)
+    // Section 0.4-0.5: Dead zone (nothing visible)
+    // Section 0.5-1.2: Profile visible (entry 0.5-0.7, exit 1.0-1.2)
+    // Section 1.2-1.4: Dead zone
+    // Section 1.4-2.2: Links visible (entry 1.4-1.6, exit 2.0-2.2)
+    // Section 2.2-2.4: Dead zone
+    // Section 2.4+: Contact visible (entry 2.4-2.6)
+
+    // Hi! opacity: 1 at 0-0.2, fades to 0 at 0.4 (but hidden if hasPassedGreeting)
+    const greetingOpacity = hasPassedGreeting 
+        ? 0 
+        : Math.max(0, Math.min(1, 1 - (scrollProgress - 0.2) / 0.2));
+
+    // Profile: entry 0.5-0.7, exit 1.0-1.2
+    const profileEntry = Math.max(0, Math.min(1, (scrollProgress - 0.5) / 0.2));
+    const profileExit = Math.max(0, Math.min(1, (scrollProgress - 1.0) / 0.2));
+    const profileOpacity = profileEntry * (1 - profileExit);
+    const profileEntryProgress = profileEntry;
+    const profileExitProgress = profileExit;
+
+    // Links: entry 1.4-1.6, exit 2.0-2.2
+    const linksEntry = Math.max(0, Math.min(1, (scrollProgress - 1.4) / 0.2));
+    const linksExit = Math.max(0, Math.min(1, (scrollProgress - 2.0) / 0.2));
+    const linksOpacity = linksEntry * (1 - linksExit);
+    const linksEntryProgress = linksEntry;
+    const linksExitProgress = linksExit;
+
+    // Contact: entry 2.4-2.6
+    const contactEntry = Math.max(0, Math.min(1, (scrollProgress - 2.4) / 0.2));
+    const contactOpacity = contactEntry;
+    const contactEntryProgress = contactEntry;
 
     return (
         <>
@@ -175,21 +369,48 @@ export default function HomePage() {
                     <ThemeToggle />
                 </div>
 
-                {/* Greeting with scroll-based fade out */}
-                <h1 
-                    className={`greeting ${stage >= 1 ? 'emerging' : ''} ${stage >= 2 ? 'popped' : ''}`}
-                    style={{ 
-                        opacity: stage >= 3 ? greetingOpacity : undefined,
-                        visibility: greetingOpacity <= 0 ? 'hidden' : undefined,
-                    }}
-                >
-                    Hi!
-                </h1>
+                {/* Greeting with scroll-based fade out - hidden permanently after passing */}
+                {!hasPassedGreeting && (
+                    <h1 
+                        className={`greeting ${stage >= 1 ? 'emerging' : ''} ${stage >= 2 ? 'popped' : ''}`}
+                        style={{ 
+                            opacity: stage >= 3 ? greetingOpacity : undefined,
+                            visibility: greetingOpacity <= 0 ? 'hidden' : undefined,
+                        }}
+                    >
+                        Hi!
+                    </h1>
+                )}
 
-                {/* Profile card with scroll-based fade in - pre-rendered but hidden */}
-                <ProfileCardLive opacity={stage >= 3 ? profileCardOpacity : 0} />
+                {/* Profile card with scroll-based fade in/out */}
+                <ProfileCardLive 
+                    opacity={stage >= 3 ? (isJumping ? 0 : profileOpacity) : 0} 
+                    entryProgress={profileEntryProgress}
+                    exitProgress={profileExitProgress}
+                />
+
+                {/* Links card with scroll-based fade in/out */}
+                <LinksCardLive 
+                    opacity={stage >= 3 ? (isJumping ? 0 : linksOpacity) : 0}
+                    entryProgress={linksEntryProgress}
+                    exitProgress={linksExitProgress}
+                />
+
+                {/* Contact card with scroll-based fade in */}
+                <ContactCardLive 
+                    opacity={stage >= 3 ? (isJumping ? 0 : contactOpacity) : 0}
+                    entryProgress={contactEntryProgress}
+                />
+
+                {/* Dot navigation indicator - 3 sections: Profile, Links, Contact */}
+                <ScrollDotIndicator
+                    totalSections={3}
+                    activeSection={activeSection}
+                    onDotClick={handleDotClick}
+                    visible={stage >= 3}
+                    theme={theme}
+                />
             </main>
-
         </>
     );
 }

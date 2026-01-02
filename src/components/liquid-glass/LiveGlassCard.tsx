@@ -9,6 +9,10 @@ interface LiveGlassCardProps {
     borderRadius?: number;
     padding?: string | number;
     opacity?: number;
+    /** Entry animation progress (0-1), controls scale and translateY */
+    entryProgress?: number;
+    /** Exit animation progress (0-1), controls scale and translateY for exit */
+    exitProgress?: number;
 }
 
 export function LiveGlassCard({
@@ -18,6 +22,8 @@ export function LiveGlassCard({
     borderRadius = 60,
     padding = 40,
     opacity = 1,
+    entryProgress = 1,
+    exitProgress = 0,
 }: LiveGlassCardProps) {
     const cardRef = useRef<HTMLDivElement>(null);
     const [transform, setTransform] = useState("rotateX(0deg) rotateY(0deg) scale3d(1, 1, 1)");
@@ -30,7 +36,7 @@ export function LiveGlassCard({
         let currentRotateX = 0;
         let currentRotateY = 0;
         const smoothingFactor = 0.15;
-        let animationId: number | null = null;
+        const animationId: number | null = null;
 
         const handleMouseMove = (e: MouseEvent) => {
             if (!isHovering) return;
@@ -77,8 +83,42 @@ export function LiveGlassCard({
 
     const paddingValue = typeof padding === "number" ? `${padding}px` : padding;
 
-    // Only render when opacity is above threshold
-    const isVisible = opacity > 0.01;
+    // Track visibility with a delay to allow fade out transition
+    const [isVisible, setIsVisible] = useState(opacity > 0.01);
+    
+    useEffect(() => {
+        if (opacity > 0.01) {
+            // Immediately show when opacity increases
+            setIsVisible(true);
+        } else {
+            // Delay hiding to allow fade out transition
+            const timer = setTimeout(() => {
+                setIsVisible(false);
+            }, 450); // Slightly longer than the opacity transition
+            return () => clearTimeout(timer);
+        }
+    }, [opacity]);
+
+    // Custom easing function: cubic ease-out for natural motion
+    const easeOutCubic = (t: number) => 1 - Math.pow(1 - t, 3);
+    const easeInCubic = (t: number) => t * t * t;
+
+    // Entry animation: scale from 0.85 to 1, translateY from 60px to 0, rotateX from -8deg to 0
+    const easedEntry = easeOutCubic(entryProgress);
+    const entryScale = 0.85 + (0.15 * easedEntry);
+    const entryTranslateY = 60 * (1 - easedEntry);
+    const entryRotateX = -8 * (1 - easedEntry);
+
+    // Exit animation: scale from 1 to 0.92, translateY from 0 to -40px, rotateX from 0 to 6deg
+    const easedExit = easeInCubic(exitProgress);
+    const exitScale = 1 - (0.08 * easedExit);
+    const exitTranslateY = -40 * easedExit;
+    const exitRotateX = 6 * easedExit;
+
+    // Combine entry and exit animations
+    const finalScale = entryScale * exitScale;
+    const finalTranslateY = entryTranslateY + exitTranslateY;
+    const finalRotateX = entryRotateX + exitRotateX;
 
     return (
         <div
@@ -89,10 +129,11 @@ export function LiveGlassCard({
                 perspective: "1200px",
                 transformStyle: "preserve-3d",
                 willChange: "transform, opacity",
-                opacity: isVisible ? opacity : 0,
+                opacity: opacity,
                 visibility: isVisible ? "visible" : "hidden",
-                pointerEvents: isVisible ? "auto" : "none",
-                transition: "opacity 0.4s ease-out",
+                pointerEvents: opacity > 0.01 ? "auto" : "none",
+                transition: "opacity 0.4s ease-in-out",
+                transform: `translateY(${finalTranslateY}px) scale(${finalScale}) rotateX(${finalRotateX}deg)`,
                 ...style,
             }}
         >
@@ -125,6 +166,7 @@ export function LiveGlassCard({
                         `,
                         border: "1px solid rgba(255, 255, 255, 0.15)",
                         zIndex: 0,
+                        pointerEvents: "none",
                     }}
                 />
 
@@ -159,4 +201,3 @@ export function LiveGlassCard({
         </div>
     );
 }
-
