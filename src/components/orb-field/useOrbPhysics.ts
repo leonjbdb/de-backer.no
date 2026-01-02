@@ -26,6 +26,8 @@ interface UseOrbPhysicsOptions {
     mousePosition: { x: number; y: number };
     tilt: { x: number; y: number };
     enabled: boolean;
+    /** Scroll delta for orb reaction (-1 to 1), orbs drift in scroll direction */
+    scrollDelta?: number;
 }
 
 export function useOrbPhysics(options: UseOrbPhysicsOptions): { 
@@ -33,7 +35,11 @@ export function useOrbPhysics(options: UseOrbPhysicsOptions): {
     focalZ: number;
     configs: OrbConfig[];
 } {
-    const { orbConfigs: initialConfigs, mousePosition, enabled } = options;
+    const { orbConfigs: initialConfigs, mousePosition, enabled, scrollDelta = 0 } = options;
+    
+    // Store scroll delta in a ref so the animation loop can access latest value
+    const scrollDeltaRef = useRef(scrollDelta);
+    scrollDeltaRef.current = scrollDelta;
     
     // Dynamic orb configs (can grow/shrink)
     const [configs, setConfigs] = useState<OrbConfig[]>(initialConfigs);
@@ -299,6 +305,11 @@ export function useOrbPhysics(options: UseOrbPhysicsOptions): {
                         // Apply orb-to-orb repulsion (always active)
                         vx += orbRepelX;
                         vy += orbRepelY;
+                        
+                        // Apply scroll delta influence - orbs drift in scroll direction
+                        // Larger orbs (closer) react more to scroll for parallax effect
+                        const scrollInfluence = scrollDeltaRef.current * 0.08 * (0.5 + orb.depthLayer * 0.5);
+                        vy += scrollInfluence * deltaTime * 0.01;
                     }
                     
                     const vz = state.vz + (targetVz - state.vz) * SMOOTHING + zOscillation;

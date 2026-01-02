@@ -14,7 +14,7 @@ interface GlassCardProps {
     entryProgress?: number;
     /** Exit animation progress (0-1), controls scale and translateY for exit */
     exitProgress?: number;
-    /** Mobile horizontal offset in vw units for swipe animation */
+    /** Mobile horizontal offset in vw units for swipe animation (legacy, used as fallback) */
     mobileOffset?: number;
     /** Mobile scale for carousel effect (0.85-1.0) */
     mobileScale?: number;
@@ -22,6 +22,12 @@ interface GlassCardProps {
     mobileBorderRadius?: number;
     /** Mobile-specific padding (applied at max-width: 480px) */
     mobilePadding?: string | number;
+    /** 3D wheel rotation around Y axis (degrees) for mobile carousel */
+    wheelRotateY?: number;
+    /** 3D wheel horizontal translation (px) for mobile carousel */
+    wheelTranslateX?: number;
+    /** 3D wheel depth translation (px) for mobile carousel */
+    wheelTranslateZ?: number;
 }
 
 // Global styles for mobile overrides using CSS custom properties
@@ -50,6 +56,9 @@ export function GlassCard({
     mobileScale = 1,
     mobileBorderRadius,
     mobilePadding,
+    wheelRotateY = 0,
+    wheelTranslateX = 0,
+    wheelTranslateZ = 0,
 }: GlassCardProps) {
     const cardRef = useRef<HTMLDivElement>(null);
     const [transform, setTransform] = useState("rotateX(0deg) rotateY(0deg) scale3d(1, 1, 1)");
@@ -195,14 +204,31 @@ export function GlassCard({
     // eslint-disable-next-line @typescript-eslint/no-unused-vars
     const { transform: _, ...styleWithoutTransform } = style || {};
     
+    // Check if we have 3D wheel transforms (mobile mode)
+    const hasWheelTransform = wheelRotateY !== 0 || wheelTranslateX !== 0 || wheelTranslateZ !== 0;
+    
     // Build optimized 3D transform for GPU compositing
     // translate3d triggers GPU layer promotion for smoother animations
-    // Order: centering -> mobile offset -> vertical animation -> scale -> rotation
-    const combinedTransform = `
-        translate3d(calc(-50% + ${mobileOffset}vw), calc(-50% + ${finalTranslateY}px), 0)
-        scale3d(${finalScale}, ${finalScale}, 1)
-        rotateX(${finalRotateX}deg)
-    `.replace(/\s+/g, ' ').trim();
+    let combinedTransform: string;
+    
+    if (hasWheelTransform) {
+        // Mobile 3D wheel carousel transform
+        // Cards rotate on a horizontal cylinder, creating a Ferris wheel effect
+        // Order: centering -> wheel position -> wheel rotation -> scale
+        combinedTransform = `
+            translate3d(calc(-50% + ${wheelTranslateX}px), -50%, ${wheelTranslateZ}px)
+            rotateY(${wheelRotateY}deg)
+            scale3d(${mobileScale}, ${mobileScale}, 1)
+        `.replace(/\s+/g, ' ').trim();
+    } else {
+        // Desktop or legacy mobile: vertical scroll animations
+        // Order: centering -> mobile offset -> vertical animation -> scale -> rotation
+        combinedTransform = `
+            translate3d(calc(-50% + ${mobileOffset}vw), calc(-50% + ${finalTranslateY}px), 0)
+            scale3d(${finalScale}, ${finalScale}, 1)
+            rotateX(${finalRotateX}deg)
+        `.replace(/\s+/g, ' ').trim();
+    }
 
     // Check if mobile overrides are provided
     const hasMobileOverrides = mobileBorderRadius !== undefined || mobilePadding !== undefined;

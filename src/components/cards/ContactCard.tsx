@@ -17,10 +17,22 @@ interface ContactCardProps {
     entryProgress?: number;
     mobileOffset?: number;
     mobileScale?: number;
+    wheelRotateY?: number;
+    wheelTranslateX?: number;
+    wheelTranslateZ?: number;
     style?: React.CSSProperties;
 }
 
-export function ContactCard({ opacity = 1, entryProgress = 1, mobileOffset = 0, mobileScale = 1, style }: ContactCardProps) {
+export function ContactCard({ 
+    opacity = 1, 
+    entryProgress = 1, 
+    mobileOffset = 0, 
+    mobileScale = 1, 
+    wheelRotateY = 0,
+    wheelTranslateX = 0,
+    wheelTranslateZ = 0,
+    style 
+}: ContactCardProps) {
     return (
         <GlassCard
             style={{
@@ -40,6 +52,9 @@ export function ContactCard({ opacity = 1, entryProgress = 1, mobileOffset = 0, 
             entryProgress={entryProgress}
             mobileOffset={mobileOffset}
             mobileScale={mobileScale}
+            wheelRotateY={wheelRotateY}
+            wheelTranslateX={wheelTranslateX}
+            wheelTranslateZ={wheelTranslateZ}
         >
             <h2 style={{
                 margin: '0 0 8px 0',

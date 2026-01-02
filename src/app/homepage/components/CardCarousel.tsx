@@ -55,6 +55,9 @@ export function CardCarousel({ visibility, isReady }: CardCarouselProps) {
                 exitProgress={profile.exitProgress}
                 mobileOffset={profile.mobileOffset}
                 mobileScale={profile.mobileScale}
+                wheelRotateY={profile.wheelRotateY}
+                wheelTranslateX={profile.wheelTranslateX}
+                wheelTranslateZ={profile.wheelTranslateZ}
             />
 
             {/* Links card with scroll-based fade in/out */}
@@ -64,6 +67,9 @@ export function CardCarousel({ visibility, isReady }: CardCarouselProps) {
                 exitProgress={links.exitProgress}
                 mobileOffset={links.mobileOffset}
                 mobileScale={links.mobileScale}
+                wheelRotateY={links.wheelRotateY}
+                wheelTranslateX={links.wheelTranslateX}
+                wheelTranslateZ={links.wheelTranslateZ}
             />
 
             {/* Contact card with scroll-based fade in */}
@@ -72,6 +78,9 @@ export function CardCarousel({ visibility, isReady }: CardCarouselProps) {
                 entryProgress={contact.entryProgress}
                 mobileOffset={contact.mobileOffset}
                 mobileScale={contact.mobileScale}
+                wheelRotateY={contact.wheelRotateY}
+                wheelTranslateX={contact.wheelTranslateX}
+                wheelTranslateZ={contact.wheelTranslateZ}
             />
         </div>
     );

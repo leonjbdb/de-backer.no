@@ -37,6 +37,8 @@ export interface OrbFieldProps {
     visible: boolean;
     mouseX: number;
     mouseY: number;
+    /** Scroll delta for orb reaction (-1 to 1), orbs drift in scroll direction */
+    scrollDelta?: number;
 }
 
 export interface OrbPhysicsConfig {

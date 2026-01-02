@@ -20,6 +20,17 @@ export interface SectionVisibility {
     exitProgress: number;
     mobileOffset: number;
     mobileScale: number;
+    // 3D wheel transform properties for mobile
+    wheelRotateY: number;
+    wheelTranslateX: number;
+    wheelTranslateZ: number;
+}
+
+export interface WheelTransform {
+    rotateY: number;
+    translateX: number;
+    translateZ: number;
+    opacity: number;
 }
 
 export interface GreetingVisibility {

@@ -11,10 +11,23 @@ interface ProfileCardProps {
     exitProgress?: number;
     mobileOffset?: number;
     mobileScale?: number;
+    wheelRotateY?: number;
+    wheelTranslateX?: number;
+    wheelTranslateZ?: number;
     style?: React.CSSProperties;
 }
 
-export function ProfileCard({ opacity = 1, entryProgress = 1, exitProgress = 0, mobileOffset = 0, mobileScale = 1, style }: ProfileCardProps) {
+export function ProfileCard({ 
+    opacity = 1, 
+    entryProgress = 1, 
+    exitProgress = 0, 
+    mobileOffset = 0, 
+    mobileScale = 1, 
+    wheelRotateY = 0,
+    wheelTranslateX = 0,
+    wheelTranslateZ = 0,
+    style 
+}: ProfileCardProps) {
     const [isPhotoHovered, setIsPhotoHovered] = useState(false);
     const hoverTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
@@ -52,6 +65,9 @@ export function ProfileCard({ opacity = 1, entryProgress = 1, exitProgress = 0, 
             exitProgress={exitProgress}
             mobileOffset={mobileOffset}
             mobileScale={mobileScale}
+            wheelRotateY={wheelRotateY}
+            wheelTranslateX={wheelTranslateX}
+            wheelTranslateZ={wheelTranslateZ}
         >
             <style suppressHydrationWarning dangerouslySetInnerHTML={{
                 __html: `

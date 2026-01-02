@@ -6,7 +6,7 @@ import { ScrollDotIndicator } from "@/components/ui/ScrollDotIndicator";
 import {
     useAnimationStages,
     useMousePosition,
-    useScrollNavigation,
+    useCardTransition,
     useSectionVisibility,
 } from "../hooks";
 import { GreetingSection } from "./GreetingSection";
@@ -37,21 +37,21 @@ export function HomePage({ initialSection }: HomePageProps) {
     // Mouse position for orb field interaction
     const mousePos = useMousePosition();
 
-    // Scroll/touch navigation with snapping
+    // Unified card transition system - handles scroll, keyboard, dots, touch
     const {
         scrollProgress,
         activeSection,
         hasPassedGreeting,
-        isJumping,
         isMobile,
+        scrollDelta,
         handleDotClick,
-    } = useScrollNavigation({ enabled: isReady, initialSection });
+    } = useCardTransition({ enabled: isReady, initialSection });
 
-    // Calculate all section visibilities
+    // Calculate all section visibilities (isJumping no longer used - animations are unified)
     const visibility = useSectionVisibility({
         scrollProgress,
         hasPassedGreeting,
-        isJumping,
+        isJumping: false, // No longer used - unified animations handle transitions
         isMobile,
     });
 
@@ -80,8 +80,8 @@ export function HomePage({ initialSection }: HomePageProps) {
                 className={`${styles.homepage} ${stage >= 2 ? styles.homepagePopped : ""}`}
                 style={{ background: homepageBackground }}
             >
-                {/* Background orb field */}
-                <OrbField visible={stage >= 2} mouseX={mousePos.x} mouseY={mousePos.y} />
+                {/* Background orb field - reacts to scroll */}
+                <OrbField visible={stage >= 2} mouseX={mousePos.x} mouseY={mousePos.y} scrollDelta={scrollDelta} />
 
                 {/* Greeting section ("Hi!" and "Welcome...") - only show if not skipping */}
                 {!skipAnimation && stage < 7 && (

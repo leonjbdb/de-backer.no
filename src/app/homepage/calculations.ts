@@ -3,7 +3,11 @@
  */
 
 import { SCROLL_ZONES, RESTING_POINTS, SECTION_THRESHOLDS } from './constants';
-import type { SectionVisibility, GreetingVisibility, WelcomeVisibility, AllSectionVisibility } from './types';
+import type { SectionVisibility, GreetingVisibility, WelcomeVisibility, AllSectionVisibility, WheelTransform } from './types';
+
+// 3D Wheel configuration for mobile
+const WHEEL_RADIUS = 600; // px - larger = flatter curve
+const ANGLE_PER_SECTION = 55; // degrees between cards
 
 /**
  * Clamp a value between min and max
@@ -130,6 +134,54 @@ export function calculateMobileScale(offset: number, isMobile: boolean): number 
 }
 
 /**
+ * Calculate 3D wheel transform for mobile carousel
+ * Cards are positioned on a horizontal cylinder that rotates as user swipes
+ * 
+ * @param sectionIndex - The index of this card (0, 1, or 2)
+ * @param scrollProgress - Current scroll/swipe progress
+ * @param isMobile - Whether we're on mobile
+ * @returns WheelTransform with rotateY, translateX, translateZ, and opacity
+ */
+export function calculateWheelTransform(
+    sectionIndex: number,
+    scrollProgress: number,
+    isMobile: boolean
+): WheelTransform {
+    if (!isMobile) {
+        return { rotateY: 0, translateX: 0, translateZ: 0, opacity: 1 };
+    }
+
+    // Convert scroll progress to a 0-2 range (matching our 3 sections)
+    // RESTING_POINTS are [0.75, 1.75, 2.75], so we normalize
+    const normalizedProgress = (scrollProgress - RESTING_POINTS[0]) / (RESTING_POINTS[2] - RESTING_POINTS[0]) * 2;
+    
+    // Calculate angle relative to current view position
+    // When normalizedProgress = 0, section 0 is centered (angle = 0)
+    // When normalizedProgress = 1, section 1 is centered
+    // When normalizedProgress = 2, section 2 is centered
+    const angle = (sectionIndex - normalizedProgress) * ANGLE_PER_SECTION;
+    const radians = (angle * Math.PI) / 180;
+    
+    // Calculate 3D position on the wheel
+    // translateX: horizontal position (sin gives left/right offset)
+    // translateZ: depth position (1 - cos gives forward/backward depth)
+    const translateX = WHEEL_RADIUS * Math.sin(radians);
+    const translateZ = WHEEL_RADIUS * (1 - Math.cos(radians));
+    
+    // Opacity fades as cards rotate away from center
+    // cos(0) = 1 (facing camera), cos(±90°) = 0 (perpendicular)
+    const cosAngle = Math.cos(radians);
+    const opacity = clamp(cosAngle, 0, 1);
+    
+    return {
+        rotateY: angle,
+        translateX,
+        translateZ: -translateZ, // Negative because CSS translateZ positive = toward viewer
+        opacity,
+    };
+}
+
+/**
  * Calculate profile card visibility
  */
 export function calculateProfileVisibility(
@@ -137,7 +189,7 @@ export function calculateProfileVisibility(
     isMobile: boolean
 ): SectionVisibility {
     const { entryStart, entryEnd, exitStart, exitEnd } = SCROLL_ZONES.profile;
-    const { opacity, entryProgress, exitProgress } = calculateSectionVisibility(
+    const { opacity: baseOpacity, entryProgress, exitProgress } = calculateSectionVisibility(
         scrollProgress,
         entryStart,
         entryEnd,
@@ -148,8 +200,23 @@ export function calculateProfileVisibility(
 
     const mobileOffset = calculateMobileOffset(scrollProgress, RESTING_POINTS[0], isMobile);
     const mobileScale = calculateMobileScale(mobileOffset, isMobile);
+    
+    // Calculate 3D wheel transform for mobile
+    const wheelTransform = calculateWheelTransform(0, scrollProgress, isMobile);
+    
+    // On mobile, use wheel opacity instead of traditional opacity
+    const opacity = isMobile ? wheelTransform.opacity : baseOpacity;
 
-    return { opacity, entryProgress, exitProgress, mobileOffset, mobileScale };
+    return { 
+        opacity, 
+        entryProgress, 
+        exitProgress, 
+        mobileOffset, 
+        mobileScale,
+        wheelRotateY: wheelTransform.rotateY,
+        wheelTranslateX: wheelTransform.translateX,
+        wheelTranslateZ: wheelTransform.translateZ,
+    };
 }
 
 /**
@@ -160,7 +227,7 @@ export function calculateLinksVisibility(
     isMobile: boolean
 ): SectionVisibility {
     const { entryStart, entryEnd, exitStart, exitEnd } = SCROLL_ZONES.links;
-    const { opacity, entryProgress, exitProgress } = calculateSectionVisibility(
+    const { opacity: baseOpacity, entryProgress, exitProgress } = calculateSectionVisibility(
         scrollProgress,
         entryStart,
         entryEnd,
@@ -171,8 +238,23 @@ export function calculateLinksVisibility(
 
     const mobileOffset = calculateMobileOffset(scrollProgress, RESTING_POINTS[1], isMobile);
     const mobileScale = calculateMobileScale(mobileOffset, isMobile);
+    
+    // Calculate 3D wheel transform for mobile
+    const wheelTransform = calculateWheelTransform(1, scrollProgress, isMobile);
+    
+    // On mobile, use wheel opacity instead of traditional opacity
+    const opacity = isMobile ? wheelTransform.opacity : baseOpacity;
 
-    return { opacity, entryProgress, exitProgress, mobileOffset, mobileScale };
+    return { 
+        opacity, 
+        entryProgress, 
+        exitProgress, 
+        mobileOffset, 
+        mobileScale,
+        wheelRotateY: wheelTransform.rotateY,
+        wheelTranslateX: wheelTransform.translateX,
+        wheelTranslateZ: wheelTransform.translateZ,
+    };
 }
 
 /**
@@ -183,7 +265,7 @@ export function calculateContactVisibility(
     isMobile: boolean
 ): SectionVisibility {
     const { entryStart, entryEnd } = SCROLL_ZONES.contact;
-    const { opacity, entryProgress, exitProgress } = calculateSectionVisibility(
+    const { opacity: baseOpacity, entryProgress, exitProgress } = calculateSectionVisibility(
         scrollProgress,
         entryStart,
         entryEnd,
@@ -194,8 +276,23 @@ export function calculateContactVisibility(
 
     const mobileOffset = calculateMobileOffset(scrollProgress, RESTING_POINTS[2], isMobile);
     const mobileScale = calculateMobileScale(mobileOffset, isMobile);
+    
+    // Calculate 3D wheel transform for mobile
+    const wheelTransform = calculateWheelTransform(2, scrollProgress, isMobile);
+    
+    // On mobile, use wheel opacity instead of traditional opacity
+    const opacity = isMobile ? wheelTransform.opacity : baseOpacity;
 
-    return { opacity, entryProgress, exitProgress, mobileOffset, mobileScale };
+    return { 
+        opacity, 
+        entryProgress, 
+        exitProgress, 
+        mobileOffset, 
+        mobileScale,
+        wheelRotateY: wheelTransform.rotateY,
+        wheelTranslateX: wheelTransform.translateX,
+        wheelTranslateZ: wheelTransform.translateZ,
+    };
 }
 
 /**
