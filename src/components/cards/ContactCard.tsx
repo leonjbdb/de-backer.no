@@ -1,19 +1,18 @@
 "use client";
 
-import { LiveGlassCard } from "./LiveGlassCard";
-import { GlassButtonLive } from "./GlassButtonLive";
+import { GlassCard, GlassButton } from "@/components/glass";
 import { siteConfig } from "@/config/site.config";
 
 function EmailIcon() {
     return (
-        <svg xmlns="http://www.w3.org/2000/svg" width="56" height="56" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+        <svg xmlns="http://www.w3.org/2000/svg" width="100%" height="100%" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
             <rect x="2" y="4" width="20" height="16" rx="2"/>
             <path d="M22 7l-10 7L2 7"/>
         </svg>
     );
 }
 
-interface ContactCardLiveProps {
+interface ContactCardProps {
     opacity?: number;
     entryProgress?: number;
     mobileOffset?: number;
@@ -21,9 +20,9 @@ interface ContactCardLiveProps {
     style?: React.CSSProperties;
 }
 
-export function ContactCardLive({ opacity = 1, entryProgress = 1, mobileOffset = 0, mobileScale = 1, style }: ContactCardLiveProps) {
+export function ContactCard({ opacity = 1, entryProgress = 1, mobileOffset = 0, mobileScale = 1, style }: ContactCardProps) {
     return (
-        <LiveGlassCard
+        <GlassCard
             style={{
                 position: "fixed",
                 top: "50%",
@@ -68,7 +67,7 @@ export function ContactCardLive({ opacity = 1, entryProgress = 1, mobileOffset =
                     }}>
                         for personal or other inquiries:
                     </p>
-                    <GlassButtonLive 
+                    <GlassButton 
                         href={`mailto:${siteConfig.contact.email}`}
                         icon={<EmailIcon />}
                         label={siteConfig.contact.email}
@@ -86,13 +85,14 @@ export function ContactCardLive({ opacity = 1, entryProgress = 1, mobileOffset =
                     }}>
                         for UiO related inquiries:
                     </p>
-                    <GlassButtonLive 
+                    <GlassButton 
                         href="mailto:l.j.b.de.backer@usit.uio.no"
                         icon={<EmailIcon />}
                         label="l.j.b.de.backer@usit.uio.no"
                     />
                 </div>
             </div>
-        </LiveGlassCard>
+        </GlassCard>
     );
 }
+

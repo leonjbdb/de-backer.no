@@ -2,7 +2,7 @@
 
 import { ReactNode, useState, useCallback, useRef } from "react";
 
-interface GlassButtonLiveProps {
+interface GlassButtonProps {
     icon: ReactNode;
     label: string;
     href: string;
@@ -13,7 +13,7 @@ interface GlassButtonLiveProps {
 // Mobile breakpoint
 const MOBILE_BREAKPOINT = 768;
 
-export function GlassButtonLive({ icon, label, href, target, rel }: GlassButtonLiveProps) {
+export function GlassButton({ icon, label, href, target, rel }: GlassButtonProps) {
     const [isHovered, setIsHovered] = useState(false);
     const [isFocused, setIsFocused] = useState(false);
     const [isPressed, setIsPressed] = useState(false);
@@ -69,9 +69,42 @@ export function GlassButtonLive({ icon, label, href, target, rel }: GlassButtonL
                         align-items: center;
                         flex-shrink: 0;
                     }
+                    .glass-button-icon {
+                        width: 64px;
+                        height: 64px;
+                    }
+                    .glass-button-icon svg {
+                        width: 56px;
+                        height: 56px;
+                    }
+                    .glass-button-content {
+                        gap: 16px;
+                        padding: 10px 24px 10px 12px;
+                    }
+                    .glass-button-label {
+                        font-size: 15px;
+                    }
                     @media (max-width: 480px) {
                         .glass-button-arrow {
                             display: none;
+                        }
+                        .glass-button-icon {
+                            width: 44px;
+                            height: 44px;
+                        }
+                        .glass-button-icon svg {
+                            width: 36px;
+                            height: 36px;
+                        }
+                        .glass-button-content {
+                            gap: 10px;
+                            padding: 8px 16px 8px 8px;
+                        }
+                        .glass-button-label {
+                            font-size: 13px;
+                        }
+                        .glass-button-link {
+                            min-height: 60px;
                         }
                     }
                 `
@@ -96,6 +129,7 @@ export function GlassButtonLive({ icon, label, href, target, rel }: GlassButtonL
                     href={href}
                     target={target}
                     rel={rel}
+                    className="glass-button-link"
                     onClick={handleClick}
                     onFocus={() => setIsFocused(true)}
                     onBlur={() => setIsFocused(false)}
@@ -136,29 +170,41 @@ export function GlassButtonLive({ icon, label, href, target, rel }: GlassButtonL
                     }} />
                     
                     {/* Content */}
-                    <div style={{
-                        display: 'flex',
-                        alignItems: 'center',
-                        gap: '16px',
-                        padding: '10px 24px 10px 12px',
-                        width: '100%',
-                        color: isActive ? 'var(--color-maroon, #4E0506)' : 'var(--color-white, #ffffff)',
-                        transition: 'color 0.25s ease',
-                    }}>
+                    <div 
+                        className="glass-button-content"
+                        style={{
+                            display: 'flex',
+                            alignItems: 'center',
+                            width: '100%',
+                            color: isActive ? 'var(--color-maroon, #4E0506)' : 'var(--color-white, #ffffff)',
+                            transition: 'color 0.25s ease',
+                        }}
+                    >
                         {/* Icon */}
-                        <span style={{ 
-                            width: 64, 
-                            height: 64, 
-                            display: 'flex', 
-                            alignItems: 'center', 
-                            justifyContent: 'center',
-                            flexShrink: 0
-                        }}>
+                        <span 
+                            className="glass-button-icon"
+                            style={{ 
+                                display: 'flex', 
+                                alignItems: 'center', 
+                                justifyContent: 'center',
+                                flexShrink: 0
+                            }}
+                        >
                             {icon}
                         </span>
                         
                         {/* Label */}
-                        <span style={{ flex: 1, fontSize: '15px', fontWeight: '500' }}>
+                        <span 
+                            className="glass-button-label"
+                            style={{ 
+                                flex: 1,
+                                minWidth: 0,
+                                fontWeight: '500',
+                                whiteSpace: 'nowrap',
+                                wordBreak: 'keep-all',
+                                overflowWrap: 'normal',
+                            }}
+                        >
                             {label}
                         </span>
                         
@@ -180,3 +226,4 @@ export function GlassButtonLive({ icon, label, href, target, rel }: GlassButtonL
         </>
     );
 }
+

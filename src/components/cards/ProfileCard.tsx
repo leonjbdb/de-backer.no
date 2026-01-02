@@ -2,10 +2,10 @@
 
 import Image from "next/image";
 import { useState, useRef, useCallback } from "react";
-import { LiveGlassCard } from "./LiveGlassCard";
+import { GlassCard } from "@/components/glass";
 import { siteConfig } from "@/config/site.config";
 
-interface ProfileCardLiveProps {
+interface ProfileCardProps {
     opacity?: number;
     entryProgress?: number;
     exitProgress?: number;
@@ -14,7 +14,7 @@ interface ProfileCardLiveProps {
     style?: React.CSSProperties;
 }
 
-export function ProfileCardLive({ opacity = 1, entryProgress = 1, exitProgress = 0, mobileOffset = 0, mobileScale = 1, style }: ProfileCardLiveProps) {
+export function ProfileCard({ opacity = 1, entryProgress = 1, exitProgress = 0, mobileOffset = 0, mobileScale = 1, style }: ProfileCardProps) {
     const [isPhotoHovered, setIsPhotoHovered] = useState(false);
     const hoverTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
@@ -35,7 +35,7 @@ export function ProfileCardLive({ opacity = 1, entryProgress = 1, exitProgress =
     }, []);
 
     return (
-        <LiveGlassCard
+        <GlassCard
             style={{
                 position: "fixed",
                 top: "50%",
@@ -55,7 +55,7 @@ export function ProfileCardLive({ opacity = 1, entryProgress = 1, exitProgress =
         >
             <style suppressHydrationWarning dangerouslySetInnerHTML={{
                 __html: `
-                .profile-content-live {
+                .profile-content {
                     display: flex;
                     flex-direction: column;
                     align-items: center;
@@ -63,7 +63,7 @@ export function ProfileCardLive({ opacity = 1, entryProgress = 1, exitProgress =
                     text-align: center;
                     transform-style: preserve-3d;
                 }
-                .about-header-live {
+                .about-header {
                     margin: 0;
                     font-size: 24px;
                     font-weight: 600;
@@ -76,7 +76,7 @@ export function ProfileCardLive({ opacity = 1, entryProgress = 1, exitProgress =
                     padding: 10px;
                     margin: -10px;
                 }
-                .profile-photo-wrapper-live {
+                .profile-photo-wrapper {
                     position: relative;
                     width: 140px;
                     height: 140px;
@@ -89,11 +89,11 @@ export function ProfileCardLive({ opacity = 1, entryProgress = 1, exitProgress =
                     transition: transform 0.3s cubic-bezier(0.25, 0.46, 0.45, 0.94),
                                 box-shadow 0.3s cubic-bezier(0.25, 0.46, 0.45, 0.94);
                 }
-                .profile-photo-live {
+                .profile-photo {
                     border-radius: 50%;
                     object-fit: cover;
                 }
-                .profile-name-live {
+                .profile-name {
                     margin: 0;
                     font-size: 32px;
                     font-weight: 700;
@@ -102,19 +102,19 @@ export function ProfileCardLive({ opacity = 1, entryProgress = 1, exitProgress =
                     letter-spacing: -0.5px;
                     line-height: 1.1;
                 }
-                .about-info-live {
+                .about-info {
                     display: flex;
                     flex-direction: column;
                     gap: 4px;
                 }
-                .about-role-live {
+                .about-role {
                     margin: 0;
                     font-size: 16px;
                     font-weight: 500;
                     color: var(--color-white, #ffffff);
                     opacity: 0.9;
                 }
-                .about-org-live {
+                .about-org {
                     margin: 0;
                     font-size: 15px;
                     font-weight: 400;
@@ -123,8 +123,8 @@ export function ProfileCardLive({ opacity = 1, entryProgress = 1, exitProgress =
                 }
             `}} />
 
-            <div className="profile-content-live">
-                <h2 className="about-header-live">
+            <div className="profile-content">
+                <h2 className="about-header">
                     About
                 </h2>
 
@@ -135,7 +135,7 @@ export function ProfileCardLive({ opacity = 1, entryProgress = 1, exitProgress =
                     onMouseLeave={handleMouseLeave}
                 >
                     <div 
-                        className="profile-photo-wrapper-live"
+                        className="profile-photo-wrapper"
                         style={{
                             transform: isPhotoHovered ? 'translateZ(50px) scale(1.08)' : 'scale(1)',
                             boxShadow: isPhotoHovered 
@@ -148,26 +148,26 @@ export function ProfileCardLive({ opacity = 1, entryProgress = 1, exitProgress =
                             alt={siteConfig.identity.name}
                             width={140}
                             height={140}
-                            className="profile-photo-live"
+                            className="profile-photo"
                             priority
                         />
                     </div>
                 </div>
 
-                <h3 className="profile-name-live">
+                <h3 className="profile-name">
                     {siteConfig.identity.name}
                 </h3>
 
-                <div className="about-info-live">
-                    <p className="about-role-live">
+                <div className="about-info">
+                    <p className="about-role">
                         Head Engineer — AV and IoT
                     </p>
-                    <p className="about-org-live">
+                    <p className="about-org">
                         University of Oslo
                     </p>
                 </div>
             </div>
-        </LiveGlassCard>
+        </GlassCard>
     );
 }
 

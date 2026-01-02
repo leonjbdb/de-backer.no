@@ -2,7 +2,7 @@
 
 import { useRef, ReactNode, useState, useEffect } from "react";
 
-interface LiveGlassCardProps {
+interface GlassCardProps {
     children?: ReactNode;
     className?: string;
     style?: React.CSSProperties;
@@ -19,7 +19,7 @@ interface LiveGlassCardProps {
     mobileScale?: number;
 }
 
-export function LiveGlassCard({
+export function GlassCard({
     children,
     className,
     style,
@@ -30,7 +30,7 @@ export function LiveGlassCard({
     exitProgress = 0,
     mobileOffset = 0,
     mobileScale = 1,
-}: LiveGlassCardProps) {
+}: GlassCardProps) {
     const cardRef = useRef<HTMLDivElement>(null);
     const [transform, setTransform] = useState("rotateX(0deg) rotateY(0deg) scale3d(1, 1, 1)");
     const [isHovering, setIsHovering] = useState(false);
@@ -224,3 +224,4 @@ export function LiveGlassCard({
         </div>
     );
 }
+

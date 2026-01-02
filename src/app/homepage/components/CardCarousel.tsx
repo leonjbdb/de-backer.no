@@ -1,9 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { ProfileCardLive } from "@/components/liquid-glass/ProfileCardLive";
-import { LinksCardLive } from "@/components/liquid-glass/LinksCardLive";
-import { ContactCardLive } from "@/components/liquid-glass/ContactCardLive";
+import { ProfileCard, LinksCard, ContactCard } from "@/components/cards";
 import type { AllSectionVisibility } from "../types";
 
 interface CardCarouselProps {
@@ -51,7 +49,7 @@ export function CardCarousel({ visibility, isReady }: CardCarouselProps) {
     return (
         <div style={wrapperStyle}>
             {/* Profile card with scroll-based fade in/out */}
-            <ProfileCardLive
+            <ProfileCard
                 opacity={profile.opacity}
                 entryProgress={profile.entryProgress}
                 exitProgress={profile.exitProgress}
@@ -60,7 +58,7 @@ export function CardCarousel({ visibility, isReady }: CardCarouselProps) {
             />
 
             {/* Links card with scroll-based fade in/out */}
-            <LinksCardLive
+            <LinksCard
                 opacity={links.opacity}
                 entryProgress={links.entryProgress}
                 exitProgress={links.exitProgress}
@@ -69,7 +67,7 @@ export function CardCarousel({ visibility, isReady }: CardCarouselProps) {
             />
 
             {/* Contact card with scroll-based fade in */}
-            <ContactCardLive
+            <ContactCard
                 opacity={contact.opacity}
                 entryProgress={contact.entryProgress}
                 mobileOffset={contact.mobileOffset}
