@@ -113,10 +113,11 @@ export function GridView({
         const baseGreyR = 100;
         const baseGreyG = 100;
         const baseGreyB = 130;
-        const baseAlpha = 0.35;
         
-        // Gradient fade distance from the reveal edge (in pixels)
-        const fadeDistance = 150;
+        // Distance for white-to-grey gradient (from bottom)
+        const whiteToGreyDistance = 200;
+        // Distance for fade-in from nothing to white (at the very bottom)
+        const fadeInDistance = 150;
         
         // Start animation
         isAnimatingRef.current = true;
@@ -137,34 +138,60 @@ export function GridView({
             const eased = 1 - Math.pow(1 - progress, 3);
             rollProgressRef.current = eased;
             
-            // The Y position of the reveal edge
-            const revealY = eased * height;
+            // The Y position where the fade ENDS (fully invisible below this)
+            // Starts above the screen (-200) and ends below the screen (height + 500)
+            const startY = -200;
+            const endY = height + 500;
+            const fadeEndY = startY + eased * (endY - startY);
+            
+            // The Y position where white starts (fade-in zone is between fadeEndY and whiteStartY)
+            const whiteStartY = fadeEndY - fadeInDistance;
             
             // Clear canvas
             ctx.clearRect(0, 0, width, height);
             
-            // Draw grid lines up to the reveal point
+            // Draw grid lines
             ctx.lineWidth = 0.5;
             
             for (let cy = 0; cy <= cellsInViewY; cy++) {
                 const y = cy * cellSizePx;
                 
-                // Skip rows below the reveal edge
-                if (y > revealY) continue;
+                // Skip rows completely below the fade end
+                if (y > fadeEndY) continue;
                 
-                // Calculate distance from reveal edge for this row
-                const distanceFromEdge = revealY - y;
+                // Calculate opacity based on position relative to fade zone
+                let opacity = 1;
+                if (y > whiteStartY) {
+                    // In the fade-in zone: fade from 0 (at fadeEndY) to 1 (at whiteStartY)
+                    opacity = (fadeEndY - y) / fadeInDistance;
+                    opacity = Math.max(0, Math.min(1, opacity));
+                    // Smoothstep for gradual fade
+                    opacity = opacity * opacity * (3 - 2 * opacity);
+                }
                 
-                // Calculate color interpolation (0 = at edge/white, 1 = far/grey)
-                const colorMix = Math.min(1, distanceFromEdge / fadeDistance);
+                // Skip if invisible
+                if (opacity < 0.01) continue;
                 
-                // Interpolate from white to grey
-                const r = Math.round(255 - (255 - baseGreyR) * colorMix);
-                const g = Math.round(255 - (255 - baseGreyG) * colorMix);
-                const b = Math.round(255 - (255 - baseGreyB) * colorMix);
+                // Calculate how far above the white zone we are
+                const distanceAboveWhite = whiteStartY - y;
                 
-                // Alpha also fades - brighter at edge
-                const alpha = baseAlpha + (0.6 - baseAlpha) * (1 - colorMix);
+                // Calculate white-to-grey mix (0 = white, 1 = grey)
+                let greyMix = 0;
+                if (distanceAboveWhite > 0) {
+                    greyMix = distanceAboveWhite / whiteToGreyDistance;
+                    greyMix = Math.min(1, greyMix);
+                    // Smoothstep for gradual transition
+                    greyMix = greyMix * greyMix * (3 - 2 * greyMix);
+                }
+                
+                // Interpolate color: white (255,255,255) -> grey (baseGreyR,G,B)
+                const r = Math.round(255 - (255 - baseGreyR) * greyMix);
+                const g = Math.round(255 - (255 - baseGreyG) * greyMix);
+                const b = Math.round(255 - (255 - baseGreyB) * greyMix);
+                
+                // Alpha: higher when white, lower when grey, multiplied by fade-in opacity
+                const baseAlphaVal = 0.7 - 0.35 * greyMix; // 0.7 when white, 0.35 when grey
+                const alpha = baseAlphaVal * opacity;
                 
                 ctx.strokeStyle = `rgba(${r}, ${g}, ${b}, ${alpha})`;
                 
@@ -174,12 +201,11 @@ export function GridView({
                 ctx.lineTo(width, y);
                 ctx.stroke();
                 
-                // Draw vertical lines for this row
+                // Draw vertical lines for this row (down to next row or fade boundary)
                 for (let cx = 0; cx <= cellsInViewX; cx++) {
                     const x = cx * cellSizePx;
-                    
-                    // Only draw down to the next row or reveal edge
-                    const lineEndY = Math.min((cy + 1) * cellSizePx, revealY);
+                    const nextY = (cy + 1) * cellSizePx;
+                    const lineEndY = Math.min(nextY, fadeEndY);
                     
                     if (lineEndY > y) {
                         ctx.beginPath();
