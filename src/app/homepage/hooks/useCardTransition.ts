@@ -188,7 +188,7 @@ export function useCardTransition({
 
     // Smooth animated transition to a target progress
     const animateToProgress = useCallback(
-        (targetProgress: number, startProgress?: number, duration?: number) => {
+        (targetProgress: number, startProgress?: number, duration?: number, useEaseOut?: boolean) => {
             const currentProgress =
                 startProgress ?? (isMobile ? scrollProgress : window.scrollY / window.innerHeight);
             const distance = targetProgress - currentProgress;
@@ -208,7 +208,8 @@ export function useCardTransition({
             // Set transition direction
             setTransitionDirection(distance > 0 ? "forward" : "backward");
 
-            const baseDuration = duration ?? (isMobile ? 350 : 600);
+            // Use shorter duration for ease-out (dot clicks)
+            const baseDuration = duration ?? (useEaseOut ? 400 : (isMobile ? 350 : 600));
             const animDuration = Math.min(800, Math.max(baseDuration, Math.abs(distance) * 500));
             const startTime = performance.now();
 
@@ -222,11 +223,11 @@ export function useCardTransition({
                 const progress = Math.min(elapsed / animDuration, 1);
 
                 let eased: number;
-                if (isMobile) {
-                    // Ease-out cubic for mobile
+                if (isMobile || useEaseOut) {
+                    // Ease-out cubic - starts fast, slows at end
                     eased = 1 - Math.pow(1 - progress, 3);
                 } else {
-                    // Parabolic ball-rolling for desktop
+                    // Parabolic ball-rolling for desktop scroll snapping
                     eased = parabolicBallEase(progress);
                 }
 
@@ -267,7 +268,7 @@ export function useCardTransition({
 
     // Navigate to a specific section with animation
     const navigateToSection = useCallback(
-        (targetSection: number) => {
+        (targetSection: number, useEaseOut?: boolean) => {
             if (isSnappingRef.current) return;
             if (targetSection < 0 || targetSection > 2) return;
 
@@ -281,7 +282,7 @@ export function useCardTransition({
                 setHasPassedGreeting(true);
             }
 
-            animateToProgress(targetProgress);
+            animateToProgress(targetProgress, undefined, undefined, useEaseOut);
         },
         [isMobile, hasPassedGreeting, animateToProgress]
     );
@@ -504,18 +505,25 @@ export function useCardTransition({
         [isMobile, enabled, scrollProgress, animateToProgress]
     );
 
-    // Handle dot click - unified animated transition
+    // Handle dot click - animated transition that starts immediately with ease-out
     const handleDotClick = useCallback(
         (index: number) => {
-            if (isSnappingRef.current || index === activeSection) return;
+            if (index === activeSection) return;
 
+            // Cancel any ongoing animations so we can start fresh
+            cancelSnap();
             if (snapTimeoutRef.current) {
                 clearTimeout(snapTimeoutRef.current);
+                snapTimeoutRef.current = undefined;
             }
 
-            navigateToSection(index);
+            // Reset snapping ref so navigateToSection doesn't block
+            isSnappingRef.current = false;
+
+            // Use ease-out for immediate visual feedback
+            navigateToSection(index, true);
         },
-        [activeSection, navigateToSection]
+        [activeSection, navigateToSection, cancelSnap]
     );
 
     // Handle keyboard navigation

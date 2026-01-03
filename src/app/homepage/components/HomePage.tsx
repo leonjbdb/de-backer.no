@@ -81,7 +81,7 @@ export function HomePage({ initialSection }: HomePageProps) {
                 style={{ background: homepageBackground }}
             >
                 {/* Background orb field - reacts to scroll */}
-                <OrbField visible={stage >= 2} mouseX={mousePos.x} mouseY={mousePos.y} scrollDelta={scrollDelta} isMobile={isMobile} />
+                <OrbField visible={stage >= 2} mouseX={mousePos.x} mouseY={mousePos.y} scrollDelta={scrollDelta} />
 
                 {/* Greeting section ("Hi!" and "Welcome...") - only show if not skipping */}
                 {!skipAnimation && stage < 7 && (
