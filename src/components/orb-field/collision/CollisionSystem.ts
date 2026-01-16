@@ -164,6 +164,86 @@ export class CollisionSystem {
 	}
 
 	/**
+	 * Applies soft repulsion forces when orbs' avoidance zones overlap.
+	 * 
+	 * The closer orbs get, the stronger the repulsion force.
+	 * Force is mass-weighted so larger orbs push smaller orbs more.
+	 * 
+	 * @param orbs - Array of all orbs to check.
+	 * @param vpc - Viewport cell metrics for coordinate conversion.
+	 * @param repulsionStrength - Base strength of the repulsion force (default 50).
+	 */
+	static applyAvoidanceRepulsion(
+		orbs: Orb[],
+		vpc: ViewportCells,
+		repulsionStrength: number = 50
+	): void {
+		for (let i = 0; i < orbs.length; i++) {
+			for (let j = i + 1; j < orbs.length; j++) {
+				const orbA = orbs[i];
+				const orbB = orbs[j];
+
+				// Skip if on different layers
+				if (orbA.layer !== orbB.layer) continue;
+
+				// Calculate distance between centers in cells
+				const cellAX = orbA.pxX * vpc.invCellSizeXPx;
+				const cellAY = orbA.pxY * vpc.invCellSizeYPx;
+				const cellBX = orbB.pxX * vpc.invCellSizeXPx;
+				const cellBY = orbB.pxY * vpc.invCellSizeYPx;
+
+				const dx = cellBX - cellAX;
+				const dy = cellBY - cellAY;
+				const distSq = dx * dx + dy * dy;
+
+				if (distSq < 0.001) continue; // Avoid division by zero
+
+				const dist = Math.sqrt(distSq);
+
+				// Calculate avoidance radii (matching OrbPhysics formula)
+				const radiusA = orbA.size - 1;
+				const radiusB = orbB.size - 1;
+				const avoidanceA = Math.floor(Math.sqrt(orbA.size) + radiusA + 1);
+				const avoidanceB = Math.floor(Math.sqrt(orbB.size) + radiusB + 1);
+
+				// Combined avoidance radius (when zones start to overlap)
+				const combinedAvoidance = avoidanceA + avoidanceB;
+
+				// Combined body radius (for hard collision, handled separately)
+				const combinedBody = radiusA + radiusB + 1;
+
+				// Check if avoidance zones overlap but not hard collision yet
+				if (dist < combinedAvoidance && dist > combinedBody) {
+					// Calculate repulsion strength based on overlap
+					// 0 at edge of avoidance, 1 at edge of body
+					const overlap = 1 - (dist - combinedBody) / (combinedAvoidance - combinedBody);
+
+					// Quadratic falloff for smooth repulsion (stronger when closer)
+					const force = overlap * overlap * repulsionStrength;
+
+					// Direction from A to B (normalized)
+					const nx = dx / dist;
+					const ny = dy / dist;
+
+					// Mass-weighted repulsion (smaller orbs get pushed more)
+					const massA = orbA.size;
+					const massB = orbB.size;
+					const totalMass = massA + massB;
+
+					const forceA = force * (massB / totalMass);
+					const forceB = force * (massA / totalMass);
+
+					// Apply repulsion (push orbs apart)
+					orbA.vx -= forceA * nx;
+					orbA.vy -= forceA * ny;
+					orbB.vx += forceB * nx;
+					orbB.vy += forceB * ny;
+				}
+			}
+		}
+	}
+
+	/**
 	 * Resolves orb-orb collisions with mass-weighted elastic bounce.
 	 * 
 	 * Checks all pairs of orbs for overlap and applies impulses based on

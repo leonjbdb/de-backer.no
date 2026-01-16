@@ -222,15 +222,18 @@ export function OrbField({
 				}
 			}
 
-			// Phase 3: Resolve orb-orb collisions (mutual elastic bounce)
+			// Phase 3: Apply soft avoidance repulsion (when avoidance zones overlap)
+			CollisionSystem.applyAvoidanceRepulsion(currentOrbs, vpc);
+
+			// Phase 4: Resolve orb-orb hard collisions (mutual elastic bounce)
 			CollisionSystem.resolveOrbOrbCollisions(currentOrbs, vpc);
 
-			// Phase 4: Move all orbs
+			// Phase 5: Move all orbs
 			for (const orb of currentOrbs) {
 				OrbPhysics.updatePosition(orb, deltaTime);
 			}
 
-			// Phase 5: Re-mark at new positions for rendering
+			// Phase 6: Re-mark at new positions for rendering
 			grid.clearDynamic();
 			for (const orb of currentOrbs) {
 				OrbPhysics.markOrbCircular(grid, orb, vpc.startCellX, vpc.startCellY, vpc.invCellSizeXPx, vpc.invCellSizeYPx);
