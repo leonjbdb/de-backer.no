@@ -39,6 +39,24 @@ export interface OrbLayerAttractionConfig {
 }
 
 /**
+ * Configuration for orb wander behavior (organic velocity drift).
+ */
+export interface OrbWanderConfig {
+	/** Minimum wander strength (radians/second). */
+	minWanderStrength: number;
+	/** Maximum wander strength (radians/second). */
+	maxWanderStrength: number;
+	/** Minimum wander speed - how fast direction changes (radians/second). */
+	minWanderSpeed: number;
+	/** Maximum wander speed (radians/second). */
+	maxWanderSpeed: number;
+	/** Minimum modulation speed for intensity variation. */
+	minModulationSpeed: number;
+	/** Maximum modulation speed. */
+	maxModulationSpeed: number;
+}
+
+/**
  * Configuration for orb burst spawning behavior.
  */
 export interface OrbBurstConfig {
@@ -105,6 +123,19 @@ export const DEFAULT_SPEED_LIMIT_CONFIG: OrbSpeedLimitConfig = {
  */
 export const DEFAULT_LAYER_ATTRACTION_CONFIG: OrbLayerAttractionConfig = {
 	attractionStrength: 0.5, // Very gentle - units are layers/s² acceleration
+};
+
+/**
+ * Default wander configuration for orbs.
+ * Creates organic, drifting motion by slowly changing velocity direction.
+ */
+export const DEFAULT_WANDER_CONFIG: OrbWanderConfig = {
+	minWanderStrength: 0.1,    // Minimum turn rate (radians/second)
+	maxWanderStrength: 0.4,    // Maximum turn rate (radians/second)
+	minWanderSpeed: 0.2,       // Slowest wander cycle (radians/second for phase)
+	maxWanderSpeed: 0.8,       // Fastest wander cycle
+	minModulationSpeed: 0.05,  // Slowest intensity variation
+	maxModulationSpeed: 0.2,   // Fastest intensity variation
 };
 
 /**

@@ -50,4 +50,39 @@ export interface Orb {
 
 	/** Despawn/fade-out animation duration for this specific orb (milliseconds). */
 	despawnAnimDurationMs: number;
+
+	// =========================================================================
+	// Wander Behavior (organic velocity drift)
+	// =========================================================================
+
+	/** 
+	 * Base wander strength for this orb (radians/second).
+	 * Controls how quickly the orb's direction can change.
+	 * Each orb has a unique value for variety.
+	 */
+	wanderStrength: number;
+
+	/**
+	 * Current wander phase (0 to 2π).
+	 * Used with sine wave for smooth, continuous direction changes.
+	 */
+	wanderPhase: number;
+
+	/**
+	 * Speed at which the wander phase progresses (radians/second).
+	 * Lower = slower, more gradual changes. Higher = faster direction shifts.
+	 * Varies per orb for organic feel.
+	 */
+	wanderSpeed: number;
+
+	/**
+	 * Secondary modulation speed for wander intensity variation.
+	 * Creates periods of more/less wandering for the same orb.
+	 */
+	wanderModulationSpeed: number;
+
+	/**
+	 * Phase for the secondary modulation.
+	 */
+	wanderModulationPhase: number;
 }

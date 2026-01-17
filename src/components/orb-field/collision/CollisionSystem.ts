@@ -59,17 +59,19 @@ export class CollisionSystem {
 		const nextLayer = Math.round(nextZ);
 
 		// For size 1 orbs, use simple single-cell collision
+		// Each axis is checked independently to avoid cross-axis reflection
 		if (orb.size === 1) {
 			const blockedX = grid.isBlocking(nextCellX, currCellY, currLayer);
 			const blockedY = grid.isBlocking(currCellX, nextCellY, currLayer);
 			const blockedZ = grid.isBlocking(currCellX, currCellY, nextLayer);
-			const blockedDiag = grid.isBlocking(nextCellX, nextCellY, nextLayer);
 
+			// Only reflect axes that are independently blocked
+			// This preserves momentum in non-blocked axes (e.g., Z-bounce shouldn't affect X/Y)
 			return {
-				blocked: blockedX || blockedY || blockedZ || blockedDiag,
-				reflectX: blockedX || (blockedDiag && nextCellX !== currCellX),
-				reflectY: blockedY || (blockedDiag && nextCellY !== currCellY),
-				reflectZ: blockedZ || (blockedDiag && nextLayer !== currLayer),
+				blocked: blockedX || blockedY || blockedZ,
+				reflectX: blockedX,
+				reflectY: blockedY,
+				reflectZ: blockedZ,
 			};
 		}
 

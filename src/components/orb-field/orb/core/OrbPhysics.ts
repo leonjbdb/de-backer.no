@@ -333,5 +333,53 @@ export class OrbPhysics {
 			orb.vz = Math.sign(orb.vz) * maxDriftSpeed;
 		}
 	}
+
+	/**
+	 * Applies organic wander behavior to gradually change orb velocity direction.
+	 * 
+	 * Uses dual sine waves for smooth, natural-looking movement:
+	 * - Primary wave controls direction change
+	 * - Secondary wave modulates intensity (creates periods of more/less wandering)
+	 * 
+	 * Updates the orb's wander phases for the next frame.
+	 * 
+	 * @param orb - The orb to apply wander to.
+	 * @param deltaTime - Time elapsed since last frame in seconds.
+	 */
+	static applyWander(orb: Orb, deltaTime: number): void {
+		// Skip if deltaTime is invalid
+		if (!isFinite(deltaTime) || deltaTime <= 0 || deltaTime > 1) return;
+
+		// Update wander phases
+		orb.wanderPhase += orb.wanderSpeed * deltaTime;
+		orb.wanderModulationPhase += orb.wanderModulationSpeed * deltaTime;
+
+		// Keep phases in 0-2π range to prevent overflow
+		if (orb.wanderPhase > Math.PI * 2) orb.wanderPhase -= Math.PI * 2;
+		if (orb.wanderModulationPhase > Math.PI * 2) orb.wanderModulationPhase -= Math.PI * 2;
+
+		// Calculate current wander intensity (modulated by secondary wave)
+		// Goes from 0.2 to 1.0, so there's always some wander but it varies
+		const modulationFactor = 0.2 + 0.8 * (0.5 + 0.5 * Math.sin(orb.wanderModulationPhase));
+
+		// Calculate angular change using sine wave for smooth direction changes
+		const angularChange = Math.sin(orb.wanderPhase) * orb.wanderStrength * modulationFactor * deltaTime;
+
+		// Skip if change is negligible or invalid
+		if (!isFinite(angularChange) || Math.abs(angularChange) < 0.0001) return;
+
+		// Get current speed (preserve it)
+		const currentSpeed = Math.sqrt(orb.vx * orb.vx + orb.vy * orb.vy);
+		if (currentSpeed < 0.1) return; // Don't wander if nearly stationary
+
+		// Get current angle and apply change
+		const currentAngle = Math.atan2(orb.vy, orb.vx);
+		const newAngle = currentAngle + angularChange;
+
+		// Apply new velocity direction while preserving speed
+		orb.vx = Math.cos(newAngle) * currentSpeed;
+		orb.vy = Math.sin(newAngle) * currentSpeed;
+		orb.angle = newAngle;
+	}
 }
 

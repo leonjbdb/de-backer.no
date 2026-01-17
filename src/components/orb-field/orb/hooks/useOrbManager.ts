@@ -9,7 +9,7 @@ import { type Orb } from '../types';
 import { OrbPhysics } from '../core/OrbPhysics';
 import { SpatialGrid } from '../../grid/core/SpatialGrid';
 import { type ViewportCells } from '../../grid/types';
-import { DEFAULT_ORB_SPAWN_CONFIG, DEFAULT_ORB_BURST_CONFIG, DEFAULT_CONTINUOUS_SPAWN_CONFIG, type OrbSpawnConfig, type OrbBurstConfig, type ContinuousSpawnConfig } from '../config';
+import { DEFAULT_ORB_SPAWN_CONFIG, DEFAULT_ORB_BURST_CONFIG, DEFAULT_CONTINUOUS_SPAWN_CONFIG, DEFAULT_WANDER_CONFIG, type OrbSpawnConfig, type OrbBurstConfig, type ContinuousSpawnConfig } from '../config';
 import { DEFAULT_ORB_VISUAL_CONFIG } from '../visuals/OrbVisualConfig';
 import { CollisionSystem } from '../../collision/CollisionSystem';
 
@@ -22,6 +22,27 @@ function generateAnimationDurations(): { spawnAnimDurationMs: number; despawnAni
 	return {
 		spawnAnimDurationMs: spawnDurationMinMs + Math.random() * (spawnDurationMaxMs - spawnDurationMinMs),
 		despawnAnimDurationMs: despawnDurationMinMs + Math.random() * (despawnDurationMaxMs - despawnDurationMinMs),
+	};
+}
+
+/**
+ * Generates random wander parameters for an orb.
+ * Each orb gets unique wander characteristics for organic movement.
+ */
+function generateWanderParams(): {
+	wanderStrength: number;
+	wanderPhase: number;
+	wanderSpeed: number;
+	wanderModulationSpeed: number;
+	wanderModulationPhase: number;
+} {
+	const { minWanderStrength, maxWanderStrength, minWanderSpeed, maxWanderSpeed, minModulationSpeed, maxModulationSpeed } = DEFAULT_WANDER_CONFIG;
+	return {
+		wanderStrength: minWanderStrength + Math.random() * (maxWanderStrength - minWanderStrength),
+		wanderPhase: Math.random() * Math.PI * 2, // Start at random phase
+		wanderSpeed: minWanderSpeed + Math.random() * (maxWanderSpeed - minWanderSpeed),
+		wanderModulationSpeed: minModulationSpeed + Math.random() * (maxModulationSpeed - minModulationSpeed),
+		wanderModulationPhase: Math.random() * Math.PI * 2,
 	};
 }
 
@@ -111,8 +132,9 @@ export function useOrbManager(options: UseOrbManagerOptions = {}): UseOrbManager
 		const cosPhi = Math.cos(phi);
 		const sinPhi = Math.sin(phi);
 
-		// Generate random animation durations for this orb
+		// Generate random animation durations and wander params for this orb
 		const animDurations = generateAnimationDurations();
+		const wanderParams = generateWanderParams();
 
 		const newOrb: Orb = {
 			id: crypto.randomUUID(),
@@ -129,6 +151,7 @@ export function useOrbManager(options: UseOrbManagerOptions = {}): UseOrbManager
 			lifetimeMs: Infinity, // Manual spawns don't expire
 			spawnAnimDurationMs: animDurations.spawnAnimDurationMs,
 			despawnAnimDurationMs: animDurations.despawnAnimDurationMs,
+			...wanderParams,
 		};
 
 		orbsRef.current.push(newOrb);
@@ -261,8 +284,9 @@ export function useOrbManager(options: UseOrbManagerOptions = {}): UseOrbManager
 			// Random lifetime between min and max
 			const lifetimeMs = minLifetimeMs + Math.random() * (maxLifetimeMs - minLifetimeMs);
 
-			// Generate random animation durations for this orb
+			// Generate random animation durations and wander params for this orb
 			const animDurations = generateAnimationDurations();
+			const wanderParams = generateWanderParams();
 
 			// Create orb
 			const newOrb: Orb = {
@@ -280,6 +304,7 @@ export function useOrbManager(options: UseOrbManagerOptions = {}): UseOrbManager
 				lifetimeMs,
 				spawnAnimDurationMs: animDurations.spawnAnimDurationMs,
 				despawnAnimDurationMs: animDurations.despawnAnimDurationMs,
+				...wanderParams,
 			};
 
 			// Mark on grid
@@ -369,8 +394,9 @@ export function useOrbManager(options: UseOrbManagerOptions = {}): UseOrbManager
 			// Random lifetime
 			const lifetimeMs = minLifetimeMs + Math.random() * (maxLifetimeMs - minLifetimeMs);
 
-			// Generate random animation durations for this orb
+			// Generate random animation durations and wander params for this orb
 			const animDurations = generateAnimationDurations();
+			const wanderParams = generateWanderParams();
 
 			const newOrb: Orb = {
 				id: crypto.randomUUID(),
@@ -387,6 +413,7 @@ export function useOrbManager(options: UseOrbManagerOptions = {}): UseOrbManager
 				lifetimeMs,
 				spawnAnimDurationMs: animDurations.spawnAnimDurationMs,
 				despawnAnimDurationMs: animDurations.despawnAnimDurationMs,
+				...wanderParams,
 			};
 
 			OrbPhysics.markOrbCircular(grid, newOrb, vpc.startCellX, vpc.startCellY, vpc.invCellSizeXPx, vpc.invCellSizeYPx);

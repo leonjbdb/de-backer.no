@@ -293,7 +293,12 @@ export function OrbField({
 				OrbPhysics.applySpeedLimit(orb, baseMaxSpeed, minMaxSpeed, decelerationRate, deltaTime);
 			}
 
-			// Phase 5: Apply layer attraction (orbs drift toward preferred depth)
+			// Phase 5: Apply wander behavior (organic velocity drift)
+			for (const orb of currentOrbs) {
+				OrbPhysics.applyWander(orb, deltaTime);
+			}
+
+			// Phase 6: Apply layer attraction (orbs drift toward preferred depth)
 			const { maxSize } = DEFAULT_ORB_SPAWN_CONFIG;
 			const { attractionStrength } = DEFAULT_LAYER_ATTRACTION_CONFIG;
 			const totalLayers = grid.config.layers;
