@@ -34,17 +34,54 @@ export interface OrbVisualConfig {
 	// Depth-Based Visual Settings
 	// =========================================================================
 
-	/** Gradient softness for closest orbs (z=0). Lower = sharper edges. */
-	minBlurSoftness: number;
-
-	/** Gradient softness for furthest orbs (z=maxLayer). Higher = softer/blurrier. */
-	maxBlurSoftness: number;
-
 	/** Opacity for furthest orbs (0-1). */
 	minOpacity: number;
 
 	/** Opacity for closest orbs (0-1). */
 	maxOpacity: number;
+
+	// =========================================================================
+	// Gaussian Blur Settings (Soft Edge Falloff)
+	// =========================================================================
+
+	/** 
+	 * Percentage of the orb radius that remains solid/opaque core (0-1).
+	 * Higher = larger bright center, lower = more diffuse throughout.
+	 */
+	coreRatio: number;
+
+	/**
+	 * Base blur width as a multiplier of orb radius.
+	 * Controls how much the orb extends beyond its core.
+	 * Higher = more spread out glow.
+	 */
+	blurWidthBase: number;
+
+	/**
+	 * How much depth increases blur width (0-1).
+	 * Far orbs (high depth) get additional blur width = radius * depthFactor * blurWidthDepthScale.
+	 */
+	blurWidthDepthScale: number;
+
+	/**
+	 * Base falloff exponent for Gaussian-like curve.
+	 * Higher = sharper falloff (more "in focus"), lower = softer falloff (more "out of focus").
+	 * Typical range: 1.5 (very soft) to 4.0 (sharp).
+	 */
+	falloffExponentBase: number;
+
+	/**
+	 * How much depth reduces the falloff exponent (0-1).
+	 * Close orbs use falloffExponentBase, far orbs use falloffExponentBase * (1 - falloffDepthScale).
+	 */
+	falloffDepthScale: number;
+
+	/**
+	 * Number of gradient color stops to use for smooth falloff.
+	 * More stops = smoother gradient but slightly more computation.
+	 * Recommended: 8-12.
+	 */
+	gradientStopCount: number;
 
 	// =========================================================================
 	// Size Scaling
@@ -71,15 +108,19 @@ export const DEFAULT_ORB_VISUAL_CONFIG: OrbVisualConfig = {
 
 	// Glow settings - large, soft glowing effect
 	glowIntensity: 1.0,
-	glowSpread: 5.0,       // Very large glow radius for soft, diffused edges
-
-	// Depth blur - soft and diffused, but cores remain visible
-	minBlurSoftness: 0.5,  // Close orbs have moderate softness
-	maxBlurSoftness: 0.85, // Far orbs are soft but still have visible cores
+	glowSpread: 3.5,       // Glow radius multiplier (total radius = baseRadius * glowSpread)
 
 	// Opacity - controls overall visibility
-	minOpacity: 0.7,       // Distant orbs remain quite visible
-	maxOpacity: 1.0,       // Close orbs at full strength (gradient handles falloff)
+	minOpacity: 0.65,      // Distant orbs remain visible
+	maxOpacity: 1.0,       // Close orbs at full strength
+
+	// Gaussian blur settings for soft edges
+	coreRatio: 0.15,              // 15% of radius is solid core
+	blurWidthBase: 0.4,           // Base blur extends 40% beyond core
+	blurWidthDepthScale: 0.3,     // Depth adds up to 30% more blur width
+	falloffExponentBase: 3.0,     // Sharp falloff for close orbs (in focus)
+	falloffDepthScale: 0.5,       // Far orbs use 50% lower exponent (out of focus)
+	gradientStopCount: 10,        // 10 stops for smooth gradient
 
 	// Size scaling - larger orbs are significantly bigger visually
 	baseRadiusPx: 35,      // Base radius for size 1 orbs

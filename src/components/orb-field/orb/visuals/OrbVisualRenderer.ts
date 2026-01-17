@@ -73,6 +73,7 @@ export class OrbVisualRenderer {
 
 	/**
 	 * Draws a single orb with radial gradient for glow and depth blur effect.
+	 * Uses Gaussian-like exponential decay for soft, natural-looking edges.
 	 *
 	 * @param ctx - The 2D canvas rendering context.
 	 * @param orb - The orb to render.
@@ -93,21 +94,28 @@ export class OrbVisualRenderer {
 		// Calculate orb visual radius based on size
 		const baseRadius = config.baseRadiusPx * Math.pow(size, config.sizeExponent);
 
-		// Calculate glow radius (extends beyond base radius)
-		const glowRadius = baseRadius * config.glowSpread;
+		// Calculate blur width - scales with both size (via baseRadius) and depth
+		// Far orbs get additional blur width for out-of-focus effect
+		const blurWidth = baseRadius * (config.blurWidthBase + depthFactor * config.blurWidthDepthScale);
 
-		// Calculate depth-based properties
+		// Total glow radius = core + blur region, scaled by glowSpread
+		const glowRadius = (baseRadius * config.coreRatio + blurWidth) * config.glowSpread;
+
+		// Calculate depth-based opacity
 		const opacity = this.lerp(config.maxOpacity, config.minOpacity, depthFactor);
-		const blurSoftness = this.lerp(config.minBlurSoftness, config.maxBlurSoftness, depthFactor);
 
-		// Create and apply the radial gradient
-		const gradient = this.createOrbGradient(
+		// Calculate depth-based falloff exponent
+		// Close orbs: higher exponent = sharper falloff = "in focus"
+		// Far orbs: lower exponent = softer falloff = "out of focus"
+		const falloffExponent = config.falloffExponentBase * (1 - depthFactor * config.falloffDepthScale);
+
+		// Create and apply the radial gradient with Gaussian-like falloff
+		const gradient = this.createGaussianGradient(
 			ctx,
 			pxX,
 			pxY,
-			baseRadius,
 			glowRadius,
-			blurSoftness,
+			falloffExponent,
 			opacity,
 			config
 		);
@@ -132,83 +140,66 @@ export class OrbVisualRenderer {
 	}
 
 	/**
-	 * Creates a radial gradient for an orb with glow and blur effects.
-	 *
-	 * The gradient structure:
-	 * - Center: Solid maroon color (core of the orb)
-	 * - Inner edge: Color with blur softness transition
-	 * - Outer glow: Color fades to transparent
+	 * Creates a radial gradient with Gaussian-like exponential decay.
+	 * 
+	 * Uses the formula: opacity = e^(-(t/sigma)^exponent)
+	 * Where t is the normalized distance from center (0-1).
+	 * 
+	 * This creates smooth, mathematically continuous falloff that mimics
+	 * real-world blur and depth-of-field effects.
 	 *
 	 * @param ctx - The 2D canvas rendering context.
 	 * @param x - Center X position.
 	 * @param y - Center Y position.
-	 * @param baseRadius - The orb's base visual radius.
-	 * @param glowRadius - The extended radius including glow.
-	 * @param blurSoftness - How soft the edge transition is (0-1).
+	 * @param glowRadius - The total radius including glow.
+	 * @param falloffExponent - Controls curve steepness (higher = sharper).
 	 * @param opacity - Overall opacity of the orb.
 	 * @param config - Visual configuration.
 	 * @returns A radial gradient for filling the orb.
 	 */
-	private static createOrbGradient(
+	private static createGaussianGradient(
 		ctx: CanvasRenderingContext2D,
 		x: number,
 		y: number,
-		baseRadius: number,
 		glowRadius: number,
-		blurSoftness: number,
+		falloffExponent: number,
 		opacity: number,
 		config: OrbVisualConfig
 	): CanvasGradient {
-		const { baseHue, baseSaturation, baseLightness, glowIntensity } = config;
+		const { baseHue, baseSaturation, baseLightness, glowIntensity, gradientStopCount, coreRatio } = config;
 
 		// Create radial gradient from center to glow edge
 		const gradient = ctx.createRadialGradient(x, y, 0, x, y, glowRadius);
 
-		// Calculate brightened center for glowing effect
-		// The core is brighter (higher lightness) to simulate internal luminosity
+		// Sigma controls the width of the Gaussian curve
+		// A sigma of ~0.4 means the curve reaches ~37% opacity at 40% of the radius
+		const sigma = 0.4;
+
+		// Pre-calculate lightness values for luminous center effect
 		const coreLightness = Math.min(baseLightness + 35, 55);
-		const innerLightness = Math.min(baseLightness + 22, 42);
-		const midLightness = Math.min(baseLightness + 12, 32);
+		const glowLightness = baseLightness;
 
-		// Opacity curve - make sure distant orbs remain visible
-		// Keep core relatively high opacity even for distant orbs
-		const coreOpacity = opacity * 0.9;  // Increased from 0.7
-		const innerOpacity = opacity * 0.65 * (1 - blurSoftness * 0.25); // Increased from 0.45
-		const midOpacity = opacity * 0.4 * (1 - blurSoftness * 0.4);      // Increased from 0.25
-		const glowOpacity = opacity * glowIntensity * 0.2;                 // Increased from 0.12
-		const outerOpacity = opacity * glowIntensity * 0.08;               // Increased from 0.04
+		// Generate gradient stops using Gaussian-like falloff
+		for (let i = 0; i <= gradientStopCount; i++) {
+			// Normalized position in gradient (0 = center, 1 = edge)
+			const t = i / gradientStopCount;
 
-		// Colors with gradual opacity falloff for soft, diffused look
-		const coreColor = `hsla(${baseHue}, ${baseSaturation}%, ${coreLightness}%, ${coreOpacity})`;
-		const innerColor = `hsla(${baseHue}, ${baseSaturation}%, ${innerLightness}%, ${innerOpacity})`;
-		const midColor = `hsla(${baseHue}, ${baseSaturation}%, ${midLightness}%, ${midOpacity})`;
-		const glowColor = `hsla(${baseHue}, ${baseSaturation}%, ${baseLightness}%, ${glowOpacity})`;
-		const outerGlow = `hsla(${baseHue}, ${baseSaturation}%, ${baseLightness}%, ${outerOpacity})`;
-		const transparentColor = `hsla(${baseHue}, ${baseSaturation}%, ${baseLightness}%, 0)`;
+			// Calculate Gaussian-like opacity falloff
+			// e^(-(t/sigma)^exponent) creates smooth decay curve
+			const gaussianFactor = Math.exp(-Math.pow(t / sigma, falloffExponent));
 
-		// Gradient stops for soft, diffused edges with visible core
-		// Even very blurry orbs keep a minimum core size for visibility
-		// blurSoftness affects how quickly it fades, but core remains visible
-		const minCoreSize = 0.08;  // Minimum 8% of radius is core
-		const minInnerSize = 0.15; // Minimum 15% for inner color
+			// Apply overall opacity and glow intensity
+			const stopOpacity = opacity * gaussianFactor * glowIntensity;
 
-		// Calculate stops - blur softness reduces core size but with minimums
-		const stop1 = 0.0;                                                    // Center - brightest
-		const stop2 = Math.max(minCoreSize, 0.15 * (1 - blurSoftness * 0.7)); // Core end
-		const stop3 = Math.max(minInnerSize, 0.25 * (1 - blurSoftness * 0.5)); // Inner end
-		const stop4 = 0.35;                                                   // Mid fade
-		const stop5 = 0.55;                                                   // Glow region
-		const stop6 = 0.75;                                                   // Outer glow
-		// stop 1.0 = fully transparent
+			// Interpolate lightness from bright core to base color
+			// Core region (t < coreRatio) stays bright, then fades
+			const lightnessT = Math.max(0, (t - coreRatio) / (1 - coreRatio));
+			const lightness = this.lerp(coreLightness, glowLightness, Math.pow(lightnessT, 0.5));
 
-		// Add gradient color stops for soft, diffused glow with visible cores
-		gradient.addColorStop(stop1, coreColor);
-		gradient.addColorStop(stop2, coreColor);
-		gradient.addColorStop(stop3, innerColor);
-		gradient.addColorStop(stop4, midColor);
-		gradient.addColorStop(stop5, glowColor);
-		gradient.addColorStop(stop6, outerGlow);
-		gradient.addColorStop(1, transparentColor);
+			// Create color with calculated opacity
+			const color = `hsla(${baseHue}, ${baseSaturation}%, ${lightness}%, ${stopOpacity})`;
+			gradient.addColorStop(t, color);
+		}
 
 		return gradient;
 	}
