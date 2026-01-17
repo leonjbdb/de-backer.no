@@ -29,6 +29,15 @@ import { GridDebugPanel } from './debug-info/components/GridDebugPanel';
 /** Debug mode flag from environment variable. */
 const IS_DEBUG_MODE = process.env.NEXT_PUBLIC_DEBUG_MODE === 'true';
 
+/** Pixels of grid/orb movement per viewport unit of scroll progress. */
+const SCROLL_OFFSET_PX_PER_UNIT = 100;
+
+/** Reference scroll progress where offset is zero (first resting point). */
+const SCROLL_OFFSET_REFERENCE = 0.75;
+
+/** Smoothing factor for interpolating scroll offset (0-1, lower = smoother). */
+const SCROLL_OFFSET_SMOOTHING = 0.08;
+
 /**
  * Props for the OrbField component.
  */
@@ -47,6 +56,10 @@ interface OrbFieldProps {
 	triggerBurst?: boolean;
 	/** Callback fired when grid roll animation completes. */
 	onAnimationComplete?: () => void;
+	/** Current scroll/swipe progress (0.75 to 2.75 range). Used for parallax grid movement. */
+	scrollProgress?: number;
+	/** Whether device is mobile (affects scroll direction: horizontal vs vertical). */
+	isMobile?: boolean;
 }
 
 /**
@@ -68,6 +81,8 @@ export function OrbField({
 	styleConfig: styleOverrides,
 	triggerBurst = false,
 	onAnimationComplete,
+	scrollProgress = SCROLL_OFFSET_REFERENCE,
+	isMobile = false,
 }: OrbFieldProps) {
 	// =========================================================================
 	// Refs for High-Performance Loop (No Re-renders)
@@ -91,6 +106,9 @@ export function OrbField({
 	const mousePosRef = useRef<{ x: number; y: number } | null>(null); // Track mouse position for orb repulsion
 	const hasBurstRef = useRef(false); // Track if burst has already happened (prevent double burst)
 	const isPageVisibleRef = useRef(typeof document !== 'undefined' ? !document.hidden : true); // Track if page/tab is visible (pause spawning when hidden)
+	const scrollProgressRef = useRef(scrollProgress); // Track scroll progress for parallax offset
+	const isMobileRef = useRef(isMobile); // Track mobile mode for scroll direction
+	const currentScrollOffsetRef = useRef({ x: 0, y: 0 }); // Smoothly interpolated scroll offset for rendering
 
 	// =========================================================================
 	// React State for UI
@@ -153,6 +171,8 @@ export function OrbField({
 	useEffect(() => { opacityRef.current = opacity; }, [opacity]);
 	useEffect(() => { currentLayerRef.current = currentLayer; }, [currentLayer]);
 	useEffect(() => { isPausedRef.current = isPaused; }, [isPaused]);
+	useEffect(() => { scrollProgressRef.current = scrollProgress; }, [scrollProgress]);
+	useEffect(() => { isMobileRef.current = isMobile; }, [isMobile]);
 
 	// =========================================================================
 	// 1. Mount & Resize Logic + Global Mouse Tracking
@@ -404,6 +424,18 @@ export function OrbField({
 		}
 		canvas.style.opacity = finalOpacity.toString();
 
+		// Calculate target parallax offset based on scroll progress
+		// Desktop: vertical offset (move up as scroll increases)
+		// Mobile: horizontal offset (move left as scroll increases)
+		const scrollOffset = -(scrollProgressRef.current - SCROLL_OFFSET_REFERENCE) * SCROLL_OFFSET_PX_PER_UNIT;
+		const targetOffsetX = isMobileRef.current ? scrollOffset : 0;
+		const targetOffsetY = isMobileRef.current ? 0 : scrollOffset;
+
+		// Smoothly interpolate toward target offset for buttery animation
+		const current = currentScrollOffsetRef.current;
+		current.x += (targetOffsetX - current.x) * SCROLL_OFFSET_SMOOTHING;
+		current.y += (targetOffsetY - current.y) * SCROLL_OFFSET_SMOOTHING;
+
 		// D. Render Debug Frame (grid lines, occupied cells, debug visuals)
 		GridRenderer.draw(
 			ctx,
@@ -415,7 +447,10 @@ export function OrbField({
 			IS_DEBUG_MODE ? hoveredCellRef.current : null,
 			grid,
 			currentLayerRef.current,
-			IS_DEBUG_MODE ? orbsRef.current : []
+			IS_DEBUG_MODE ? orbsRef.current : [],
+			undefined, // use default orbDebugConfig
+			current.x,
+			current.y
 		);
 
 		// E. Render Visual Orbs (maroon orbs with glow and depth blur)
@@ -430,7 +465,9 @@ export function OrbField({
 					orbsRef.current,
 					grid.config.layers,
 					undefined, // use default config
-					now       // current time for spawn/despawn animations
+					now,       // current time for spawn/despawn animations
+					current.x,
+					current.y
 				);
 			}
 		}

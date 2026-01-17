@@ -85,6 +85,8 @@ export function HomePage({ initialSection }: HomePageProps) {
                 visible={true} 
                 triggerBurst={stage >= 2 || (skipAnimation && gridAnimationComplete)}
                 onAnimationComplete={handleGridAnimationComplete}
+                scrollProgress={scrollProgress}
+                isMobile={isMobile}
             />
 
             <main

@@ -39,6 +39,8 @@ export class GridRenderer {
 	 * @param currentLayer - Currently visible depth layer.
 	 * @param orbs - Array of orbs to render debug visuals for.
 	 * @param orbDebugConfig - Configuration for orb debug visualization.
+	 * @param offsetX - Horizontal offset in pixels for parallax scrolling.
+	 * @param offsetY - Vertical offset in pixels for parallax scrolling.
 	 */
 	static draw(
 		ctx: CanvasRenderingContext2D,
@@ -51,7 +53,9 @@ export class GridRenderer {
 		grid: SpatialGrid | null = null,
 		currentLayer: number = 0,
 		orbs: Orb[] = [],
-		orbDebugConfig: OrbDebugVisualConfig = DEFAULT_ORB_DEBUG_CONFIG
+		orbDebugConfig: OrbDebugVisualConfig = DEFAULT_ORB_DEBUG_CONFIG,
+		offsetX: number = 0,
+		offsetY: number = 0
 	): void {
 		const { width, height } = windowSize;
 		const { startCellX, endCellX, startCellY, endCellY, cellSizeXPx, cellSizeYPx } = viewportCells;
@@ -72,6 +76,10 @@ export class GridRenderer {
 		const whiteStartY = fadeEndY - fadeInDistance;
 
 		ctx.clearRect(0, 0, width, height);
+
+		// Apply parallax offset translation
+		ctx.save();
+		ctx.translate(offsetX, offsetY);
 
 		// Phase 1: Draw occupied cells (only after reveal completes)
 		if (grid && progress >= 1) {
@@ -128,6 +136,9 @@ export class GridRenderer {
 		if (orbs.length > 0 && progress >= 1) {
 			this.drawOrbDebugVisuals(ctx, orbs, currentLayer, orbDebugConfig);
 		}
+
+		// Restore canvas state after parallax offset
+		ctx.restore();
 	}
 
 	/**

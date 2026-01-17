@@ -39,6 +39,8 @@ export class OrbVisualRenderer {
 	 * @param totalLayers - Total number of z-layers in the system.
 	 * @param config - Visual configuration for orb appearance.
 	 * @param currentTime - Current timestamp from performance.now() for animations.
+	 * @param offsetX - Horizontal offset in pixels for parallax scrolling.
+	 * @param offsetY - Vertical offset in pixels for parallax scrolling.
 	 */
 	static draw(
 		ctx: CanvasRenderingContext2D,
@@ -46,7 +48,9 @@ export class OrbVisualRenderer {
 		orbs: Orb[],
 		totalLayers: number,
 		config: OrbVisualConfig = DEFAULT_ORB_VISUAL_CONFIG,
-		currentTime: number = performance.now()
+		currentTime: number = performance.now(),
+		offsetX: number = 0,
+		offsetY: number = 0
 	): void {
 		const { width, height } = windowSize;
 
@@ -61,6 +65,10 @@ export class OrbVisualRenderer {
 		// NOTE: No layer filtering - all orbs from all z-layers are rendered
 		const sortedOrbs = [...orbs].sort((a, b) => b.z - a.z);
 
+		// Apply parallax offset translation
+		ctx.save();
+		ctx.translate(offsetX, offsetY);
+
 		// Use 'screen' blend mode for additive-like blending
 		// This makes overlapping orbs blend together nicely (brighter where they overlap)
 		ctx.globalCompositeOperation = 'screen';
@@ -72,6 +80,9 @@ export class OrbVisualRenderer {
 
 		// Reset composite operation
 		ctx.globalCompositeOperation = 'source-over';
+
+		// Restore canvas state after parallax offset
+		ctx.restore();
 	}
 
 	/**
