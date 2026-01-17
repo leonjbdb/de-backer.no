@@ -488,27 +488,31 @@ export function OrbField({
 		// Phase 5.6: Resolve orb-orb collisions (hard bounce when bodies overlap)
 		CollisionSystem.resolveOrbOrbCollisions(currentOrbs, vpc);
 
-		// Phase 6: Move all orbs
+		// Phase 6: Check wall collisions BEFORE movement, then move
 		for (const orb of currentOrbs) {
+			// Temporarily clear this orb's cells for collision check
+			OrbPhysics.clearOrbCircular(grid, orb, vpc.startCellX, vpc.startCellY, vpc.invCellSizeXPx, vpc.invCellSizeYPx);
+
+			const collision = CollisionSystem.checkMove(orb, deltaTime, grid, vpc);
+
+			// Restore orb's cells
+			OrbPhysics.markOrbCircular(grid, orb, vpc.startCellX, vpc.startCellY, vpc.invCellSizeXPx, vpc.invCellSizeYPx);
+
+			if (collision.blocked) {
+				// Reflect velocity on blocked axes BEFORE movement
+				CollisionSystem.applyReflection(orb, collision.reflectX, collision.reflectY, collision.reflectZ);
+			}
+
+			// Now move with (possibly reflected) velocity
 			OrbPhysics.updatePosition(orb, deltaTime);
 		}
 
-			// Phase 7: Check border/wall collisions for each orb (3D) AFTER movement
-			for (const orb of currentOrbs) {
-				// Temporarily clear this orb's cells
-				OrbPhysics.clearOrbCircular(grid, orb, vpc.startCellX, vpc.startCellY, vpc.invCellSizeXPx, vpc.invCellSizeYPx);
-
-				const collision = CollisionSystem.checkMove(orb, deltaTime, grid, vpc);
-
-				// Restore orb's cells
-				OrbPhysics.markOrbCircular(grid, orb, vpc.startCellX, vpc.startCellY, vpc.invCellSizeXPx, vpc.invCellSizeYPx);
-
-				if (collision.blocked) {
-					// Revert the movement and reflect velocity
-					OrbPhysics.updatePosition(orb, -deltaTime);
-					CollisionSystem.applyReflection(orb, collision.reflectX, collision.reflectY, collision.reflectZ);
-				}
-			}
+		// Phase 6.5: Safety check - unstick any orbs that ended up inside walls
+		for (const orb of currentOrbs) {
+			OrbPhysics.clearOrbCircular(grid, orb, vpc.startCellX, vpc.startCellY, vpc.invCellSizeXPx, vpc.invCellSizeYPx);
+			CollisionSystem.unstickFromWall(orb, grid, vpc);
+			OrbPhysics.markOrbCircular(grid, orb, vpc.startCellX, vpc.startCellY, vpc.invCellSizeXPx, vpc.invCellSizeYPx);
+		}
 
 			// Phase 8: Re-mark at new positions for rendering
 			grid.clearDynamic();

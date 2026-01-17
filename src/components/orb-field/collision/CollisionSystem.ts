@@ -192,6 +192,88 @@ export class CollisionSystem {
 	}
 
 	/**
+	 * Checks if an orb's current position overlaps with a wall and pushes it out.
+	 * 
+	 * This is a safety mechanism to handle orbs that somehow got stuck inside walls
+	 * (e.g., pushed by other orbs, spawned incorrectly, or due to floating point errors).
+	 * 
+	 * @param orb - The orb to check and fix.
+	 * @param grid - The spatial grid instance for wall queries.
+	 * @param vpc - Viewport cell metrics for coordinate conversion.
+	 * @returns True if the orb was stuck and was pushed out.
+	 */
+	static unstickFromWall(
+		orb: Orb,
+		grid: SpatialGrid,
+		vpc: ViewportCells
+	): boolean {
+		const centerCellX = ((orb.pxX * vpc.invCellSizeXPx) | 0) + vpc.startCellX;
+		const centerCellY = ((orb.pxY * vpc.invCellSizeYPx) | 0) + vpc.startCellY;
+		const centerLayer = Math.round(orb.z);
+		const radius = orb.size - 1;
+
+		// Check if any part of the orb is inside a wall
+		let stuckX = false;
+		let stuckY = false;
+		let stuckZ = false;
+		let pushDirX = 0;
+		let pushDirY = 0;
+		let pushDirZ = 0;
+
+		// For size 1 orbs, check single cell
+		if (orb.size === 1) {
+			if (grid.isWall(centerCellX, centerCellY, centerLayer)) {
+				// Determine push direction based on velocity (push opposite to movement)
+				pushDirX = orb.vx !== 0 ? -Math.sign(orb.vx) : (Math.random() > 0.5 ? 1 : -1);
+				pushDirY = orb.vy !== 0 ? -Math.sign(orb.vy) : (Math.random() > 0.5 ? 1 : -1);
+				pushDirZ = orb.vz !== 0 ? -Math.sign(orb.vz) : 0;
+				stuckX = stuckY = true;
+			}
+		} else {
+			// For multi-cell orbs, check spherical footprint
+			for (let dz = -radius; dz <= radius && !(stuckX && stuckY && stuckZ); dz++) {
+				for (let dy = -radius; dy <= radius && !(stuckX && stuckY && stuckZ); dy++) {
+					for (let dx = -radius; dx <= radius; dx++) {
+						if (dx * dx + dy * dy + dz * dz <= radius * radius) {
+							if (grid.isWall(centerCellX + dx, centerCellY + dy, centerLayer + dz)) {
+								// Track which directions have walls
+								if (dx !== 0) { stuckX = true; pushDirX = -Math.sign(dx); }
+								if (dy !== 0) { stuckY = true; pushDirY = -Math.sign(dy); }
+								if (dz !== 0) { stuckZ = true; pushDirZ = -Math.sign(dz); }
+							}
+						}
+					}
+				}
+			}
+		}
+
+		// If stuck, push the orb out
+		if (stuckX || stuckY || stuckZ) {
+			const pushDistance = 2; // Push 2 cells worth
+			const cellSizeXPx = 1 / vpc.invCellSizeXPx;
+			const cellSizeYPx = 1 / vpc.invCellSizeYPx;
+
+			if (stuckX && pushDirX !== 0) {
+				orb.pxX += pushDirX * pushDistance * cellSizeXPx;
+				orb.vx = Math.abs(orb.vx) * pushDirX; // Ensure velocity points away from wall
+			}
+			if (stuckY && pushDirY !== 0) {
+				orb.pxY += pushDirY * pushDistance * cellSizeYPx;
+				orb.vy = Math.abs(orb.vy) * pushDirY;
+			}
+			if (stuckZ && pushDirZ !== 0) {
+				orb.z += pushDirZ * pushDistance;
+				orb.vz = Math.abs(orb.vz) * pushDirZ;
+			}
+
+			orb.angle = Math.atan2(orb.vy, orb.vx);
+			return true;
+		}
+
+		return false;
+	}
+
+	/**
 	 * Applies soft 3D repulsion forces when orbs' avoidance zones overlap.
 		 * 
 		 * The closer orbs get, the stronger the repulsion force.
@@ -227,77 +309,87 @@ export class CollisionSystem {
 				const dz = cellBZ - cellAZ;
 				const distSq = dx * dx + dy * dy + dz * dz;
 
-				if (distSq < 0.001) continue; // Avoid division by zero
-
-				const dist = Math.sqrt(distSq);
-
-				// Calculate avoidance radii - smaller zone for subtler avoidance
+				// Calculate avoidance radii - ensure minimum buffer for all orb sizes
 				const radiusA = orbA.size - 1;
 				const radiusB = orbB.size - 1;
-				// Reduced avoidance zone: just 0.5 cells beyond the body radius
-				const avoidanceA = radiusA + 0.5;
-				const avoidanceB = radiusB + 0.5;
+				// Avoidance zone: at least 1.0 cell beyond the body radius (was 0.5, too small for size-1)
+				const avoidanceA = radiusA + 1.0;
+				const avoidanceB = radiusB + 1.0;
 
-			// Combined avoidance radius (when zones start to overlap)
-			const combinedAvoidance = avoidanceA + avoidanceB;
+				// Combined avoidance radius (when zones start to overlap)
+				const combinedAvoidance = avoidanceA + avoidanceB;
 
-			// Combined body radius (for hard collision, handled separately)
-			const combinedBody = radiusA + radiusB + 1;
+				// Combined body radius (for hard collision, handled separately)
+				const combinedBody = radiusA + radiusB + 1;
 
-			// Apply avoidance repulsion when zones overlap
-			// Continue applying even during body overlap to provide continuous outward pressure
-			// This helps prevent orbs from getting stuck together
-			if (dist < combinedAvoidance) {
-				// Calculate repulsion strength based on overlap
-				// When in avoidance zone (not touching): gentle repulsion
-				// When in body collision: stronger continuous pressure
-				let overlap: number;
-				let forceMultiplier: number;
+				// Handle zero-distance case with random separation direction
+				let dist: number;
+				let nx: number, ny: number, nz: number;
 				
-				if (dist > combinedBody) {
-					// In avoidance zone only - gentle repulsion
-					// 0 at edge of avoidance, 1 at edge of body
-					overlap = 1 - (dist - combinedBody) / (combinedAvoidance - combinedBody);
-					forceMultiplier = 1.0;
+				if (distSq < 0.001) {
+					// Generate random separation direction to unstick orbs
+					const randomAngle = Math.random() * Math.PI * 2;
+					const randomPhi = (Math.random() - 0.5) * Math.PI;
+					nx = Math.cos(randomAngle) * Math.cos(randomPhi);
+					ny = Math.sin(randomAngle) * Math.cos(randomPhi);
+					nz = Math.sin(randomPhi);
+					dist = 0.001;
 				} else {
-					// In body collision - apply stronger continuous pressure
-					// This helps unstick overlapping orbs
-					overlap = 1.0; // Maximum overlap factor
-					forceMultiplier = 2.0; // Double strength during collision
+					dist = Math.sqrt(distSq);
+					nx = dx / dist;
+					ny = dy / dist;
+					nz = dz / dist;
 				}
 
-				// Quadratic falloff for smooth repulsion (stronger when closer)
-				// This is now an acceleration, applied gradually via deltaTime
-				const acceleration = overlap * overlap * repulsionStrength * forceMultiplier;
+				// Apply avoidance repulsion when zones overlap
+				// Continue applying even during body overlap to provide continuous outward pressure
+				// This helps prevent orbs from getting stuck together
+				if (dist < combinedAvoidance) {
+					// Calculate repulsion strength based on overlap
+					// When in avoidance zone (not touching): gentle repulsion
+					// When in body collision: stronger continuous pressure
+					let overlap: number;
+					let forceMultiplier: number;
+					
+					if (dist > combinedBody) {
+						// In avoidance zone only - gentle repulsion
+						// 0 at edge of avoidance, 1 at edge of body
+						overlap = 1 - (dist - combinedBody) / (combinedAvoidance - combinedBody);
+						forceMultiplier = 1.0;
+					} else {
+						// In body collision - apply stronger continuous pressure
+						// This helps unstick overlapping orbs
+						overlap = 1.0; // Maximum overlap factor
+						forceMultiplier = 3.0; // Triple strength during collision for more forceful separation
+					}
 
-				// Direction from A to B (normalized) in 3D
-				const nx = dx / dist;
-				const ny = dy / dist;
-				const nz = dz / dist;
+					// Quadratic falloff for smooth repulsion (stronger when closer)
+					// This is now an acceleration, applied gradually via deltaTime
+					const acceleration = overlap * overlap * repulsionStrength * forceMultiplier;
 
-				// Mass-weighted repulsion (smaller orbs get pushed more)
-				const massA = orbA.size;
-				const massB = orbB.size;
-				const totalMass = massA + massB;
+					// Mass-weighted repulsion (smaller orbs get pushed more)
+					const massA = orbA.size;
+					const massB = orbB.size;
+					const totalMass = massA + massB;
 
-				const accelA = acceleration * (massB / totalMass);
-				const accelB = acceleration * (massA / totalMass);
+					const accelA = acceleration * (massB / totalMass);
+					const accelB = acceleration * (massA / totalMass);
 
-				// Apply 3D repulsion as gradual acceleration (push orbs apart)
-				// Guard against NaN propagation
-				if (isFinite(accelA) && isFinite(accelB)) {
-					orbA.vx -= accelA * nx * deltaTime;
-					orbA.vy -= accelA * ny * deltaTime;
-					orbA.vz -= accelA * nz * deltaTime;
-					orbB.vx += accelB * nx * deltaTime;
-					orbB.vy += accelB * ny * deltaTime;
-					orbB.vz += accelB * nz * deltaTime;
+					// Apply 3D repulsion as gradual acceleration (push orbs apart)
+					// Guard against NaN propagation
+					if (isFinite(accelA) && isFinite(accelB)) {
+						orbA.vx -= accelA * nx * deltaTime;
+						orbA.vy -= accelA * ny * deltaTime;
+						orbA.vz -= accelA * nz * deltaTime;
+						orbB.vx += accelB * nx * deltaTime;
+						orbB.vy += accelB * ny * deltaTime;
+						orbB.vz += accelB * nz * deltaTime;
 
-					// Update angles to match new velocity directions
-					orbA.angle = Math.atan2(orbA.vy, orbA.vx);
-					orbB.angle = Math.atan2(orbB.vy, orbB.vx);
+						// Update angles to match new velocity directions
+						orbA.angle = Math.atan2(orbA.vy, orbA.vx);
+						orbB.angle = Math.atan2(orbB.vy, orbB.vx);
+					}
 				}
-			}
 			}
 		}
 	}
@@ -399,95 +491,113 @@ export class CollisionSystem {
 				const dz = cellBZ - cellAZ;
 				const distSq = dx * dx + dy * dy + dz * dz;
 
-			// Combined radius (in cells) - orbs touch when distance <= sum of radii + 1
-			const radiusA = orbA.size - 1;
-			const radiusB = orbB.size - 1;
-			const minDist = radiusA + radiusB + 1;
+				// Combined radius (in cells) - orbs touch when distance <= sum of radii + 1
+				const radiusA = orbA.size - 1;
+				const radiusB = orbB.size - 1;
+				const minDist = radiusA + radiusB + 1;
 
-			if (distSq < minDist * minDist) {
-				let dist: number;
-				let nx: number, ny: number, nz: number;
+				if (distSq < minDist * minDist) {
+					let dist: number;
+					let nx: number, ny: number, nz: number;
 
-				// Handle zero-distance case (orbs at same position)
-				if (distSq < 0.001) {
-					// Generate random separation direction to unstick orbs
-					const randomAngle = Math.random() * Math.PI * 2;
-					const randomPhi = (Math.random() - 0.5) * Math.PI;
-					nx = Math.cos(randomAngle) * Math.cos(randomPhi);
-					ny = Math.sin(randomAngle) * Math.cos(randomPhi);
-					nz = Math.sin(randomPhi);
-					dist = 0.001; // Use tiny distance to prevent division by zero
-				} else {
-					dist = Math.sqrt(distSq);
-					nx = dx / dist;
-					ny = dy / dist;
-					nz = dz / dist;
-				}
+					// Handle zero-distance case (orbs at same position)
+					if (distSq < 0.001) {
+						// Generate random separation direction to unstick orbs
+						const randomAngle = Math.random() * Math.PI * 2;
+						const randomPhi = (Math.random() - 0.5) * Math.PI;
+						nx = Math.cos(randomAngle) * Math.cos(randomPhi);
+						ny = Math.sin(randomAngle) * Math.cos(randomPhi);
+						nz = Math.sin(randomPhi);
+						dist = 0.001; // Use tiny distance to prevent division by zero
+					} else {
+						dist = Math.sqrt(distSq);
+						nx = dx / dist;
+						ny = dy / dist;
+						nz = dz / dist;
+					}
 
-				// Use size as mass (larger orbs have more momentum)
-				const massA = orbA.size;
-				const massB = orbB.size;
-				const totalMass = massA + massB;
+					// Use size as mass (larger orbs have more momentum)
+					const massA = orbA.size;
+					const massB = orbB.size;
+					const totalMass = massA + massB;
 
-				// Position correction: ALWAYS push orbs apart if overlapping
-				// This is critical to prevent orbs from getting stuck
-				const overlap = minDist - dist;
-				if (overlap > 0) {
-					// More aggressive separation for deep overlaps
-					// Scale factor: 1.2x for small overlaps, up to 2.0x for deep overlaps
-					const overlapRatio = overlap / minDist;
-					const separationMultiplier = 1.2 + (0.8 * overlapRatio);
+					// Position correction: ALWAYS push orbs apart if overlapping
+					// This is critical to prevent orbs from getting stuck
+					const overlap = minDist - dist;
+					const overlapRatio = overlap > 0 ? overlap / minDist : 0;
 					
-					// Distribute separation based on mass (smaller orbs move more)
-					const separationA = (overlap * massB / totalMass) * separationMultiplier;
-					const separationB = (overlap * massA / totalMass) * separationMultiplier;
+					if (overlap > 0) {
+						// More aggressive separation for deep overlaps
+						// Scale factor: 1.2x for small overlaps, up to 2.0x for deep overlaps
+						const separationMultiplier = 1.2 + (0.8 * overlapRatio);
+						
+						// Distribute separation based on mass (smaller orbs move more)
+						const separationA = (overlap * massB / totalMass) * separationMultiplier;
+						const separationB = (overlap * massA / totalMass) * separationMultiplier;
 
-					// Convert back to pixel space for XY, keep Z in layers
-					const cellSizeXPx = 1 / vpc.invCellSizeXPx;
-					const cellSizeYPx = 1 / vpc.invCellSizeYPx;
+						// Convert back to pixel space for XY, keep Z in layers
+						const cellSizeXPx = 1 / vpc.invCellSizeXPx;
+						const cellSizeYPx = 1 / vpc.invCellSizeYPx;
 
-					// Guard against NaN propagation
-					if (isFinite(separationA) && isFinite(separationB) && isFinite(nx) && isFinite(ny) && isFinite(nz)) {
-						orbA.pxX -= nx * separationA * cellSizeXPx;
-						orbA.pxY -= ny * separationA * cellSizeYPx;
-						orbA.z -= nz * separationA;
-						orbB.pxX += nx * separationB * cellSizeXPx;
-						orbB.pxY += ny * separationB * cellSizeYPx;
-						orbB.z += nz * separationB;
+						// Guard against NaN propagation
+						if (isFinite(separationA) && isFinite(separationB) && isFinite(nx) && isFinite(ny) && isFinite(nz)) {
+							orbA.pxX -= nx * separationA * cellSizeXPx;
+							orbA.pxY -= ny * separationA * cellSizeYPx;
+							orbA.z -= nz * separationA;
+							orbB.pxX += nx * separationB * cellSizeXPx;
+							orbB.pxY += ny * separationB * cellSizeYPx;
+							orbB.z += nz * separationB;
+						}
 					}
-				}
 
-				// Velocity resolution: Only if objects are approaching each other
-				// Relative velocity of A with respect to B in 3D
-				const dvx = orbA.vx - orbB.vx;
-				const dvy = orbA.vy - orbB.vy;
-				const dvz = orbA.vz - orbB.vz;
+					// Velocity resolution
+					// Relative velocity of A with respect to B in 3D
+					const dvx = orbA.vx - orbB.vx;
+					const dvy = orbA.vy - orbB.vy;
+					const dvz = orbA.vz - orbB.vz;
 
-				// Relative velocity in collision normal direction
-				const dvn = dvx * nx + dvy * ny + dvz * nz;
+					// Relative velocity in collision normal direction
+					const dvn = dvx * nx + dvy * ny + dvz * nz;
 
-				// Only resolve velocity if objects are approaching each other
-				if (dvn > 0 && isFinite(dvn)) {
-					// Mass-weighted impulse factors with reduced elasticity
-					// Using 0.8 instead of 2.0 for softer, less oscillation-prone collisions
-					const elasticity = 0.8;
-					const impulseA = (elasticity * massB / totalMass) * dvn;
-					const impulseB = (elasticity * massA / totalMass) * dvn;
+					// Minimum separation speed for stuck orbs
+					const minSeparationSpeed = 20; // pixels/sec
+					
+					if (dvn > 0 && isFinite(dvn)) {
+						// Objects are approaching - apply elastic collision response
+						// Mass-weighted impulse factors with reduced elasticity
+						const elasticity = 0.8;
+						const impulseA = (elasticity * massB / totalMass) * dvn;
+						const impulseB = (elasticity * massA / totalMass) * dvn;
 
-					// Guard against NaN propagation
-					if (isFinite(impulseA) && isFinite(impulseB)) {
-						orbA.vx -= impulseA * nx;
-						orbA.vy -= impulseA * ny;
-						orbA.vz -= impulseA * nz;
-						orbB.vx += impulseB * nx;
-						orbB.vy += impulseB * ny;
-						orbB.vz += impulseB * nz;
+						// Guard against NaN propagation
+						if (isFinite(impulseA) && isFinite(impulseB)) {
+							orbA.vx -= impulseA * nx;
+							orbA.vy -= impulseA * ny;
+							orbA.vz -= impulseA * nz;
+							orbB.vx += impulseB * nx;
+							orbB.vy += impulseB * ny;
+							orbB.vz += impulseB * nz;
+						}
+					} else if (overlapRatio > 0.3) {
+						// Objects are stuck (significant overlap but not approaching)
+						// Apply minimum separation velocity to unstick them
+						const separationImpulse = minSeparationSpeed * overlapRatio;
+						const impulseA = separationImpulse * (massB / totalMass);
+						const impulseB = separationImpulse * (massA / totalMass);
 
-						// Update angles to match new velocity directions
-						orbA.angle = Math.atan2(orbA.vy, orbA.vx);
-						orbB.angle = Math.atan2(orbB.vy, orbB.vx);
+						if (isFinite(impulseA) && isFinite(impulseB)) {
+							orbA.vx -= impulseA * nx;
+							orbA.vy -= impulseA * ny;
+							orbA.vz -= impulseA * nz * 0.05; // Scale Z since it's in layers/s
+							orbB.vx += impulseB * nx;
+							orbB.vy += impulseB * ny;
+							orbB.vz += impulseB * nz * 0.05;
+						}
 					}
-				}
+
+					// Update angles to match new velocity directions
+					orbA.angle = Math.atan2(orbA.vy, orbA.vx);
+					orbB.angle = Math.atan2(orbB.vy, orbB.vx);
 				}
 			}
 		}
