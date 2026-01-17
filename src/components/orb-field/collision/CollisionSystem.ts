@@ -60,10 +60,11 @@ export class CollisionSystem {
 
 		// For size 1 orbs, use simple single-cell collision
 		// Each axis is checked independently to avoid cross-axis reflection
+		// Use isWall() instead of isBlocking() - only bounce off actual walls, not other orbs
 		if (orb.size === 1) {
-			const blockedX = grid.isBlocking(nextCellX, currCellY, currLayer);
-			const blockedY = grid.isBlocking(currCellX, nextCellY, currLayer);
-			const blockedZ = grid.isBlocking(currCellX, currCellY, nextLayer);
+			const blockedX = grid.isWall(nextCellX, currCellY, currLayer);
+			const blockedY = grid.isWall(currCellX, nextCellY, currLayer);
+			const blockedZ = grid.isWall(currCellX, currCellY, nextLayer);
 
 			// Only reflect axes that are independently blocked
 			// This preserves momentum in non-blocked axes (e.g., Z-bounce shouldn't affect X/Y)
@@ -87,16 +88,16 @@ export class CollisionSystem {
 			for (let dy = -radius; dy <= radius; dy++) {
 				for (let dx = -radius; dx <= radius; dx++) {
 					if (dx * dx + dy * dy + dz * dz <= radius * radius) {
-						// Check X-axis movement
-						if (grid.isBlocking(nextCellX + dx, currCellY + dy, currLayer + dz)) {
+						// Check X-axis movement - use isWall() to only bounce off actual walls
+						if (grid.isWall(nextCellX + dx, currCellY + dy, currLayer + dz)) {
 							blockedX = true;
 						}
 						// Check Y-axis movement
-						if (grid.isBlocking(currCellX + dx, nextCellY + dy, currLayer + dz)) {
+						if (grid.isWall(currCellX + dx, nextCellY + dy, currLayer + dz)) {
 							blockedY = true;
 						}
 						// Check Z-axis movement
-						if (grid.isBlocking(currCellX + dx, currCellY + dy, nextLayer + dz)) {
+						if (grid.isWall(currCellX + dx, currCellY + dy, nextLayer + dz)) {
 							blockedZ = true;
 						}
 					}
@@ -185,20 +186,23 @@ export class CollisionSystem {
 		if (reflectX) orb.vx = -orb.vx;
 		if (reflectY) orb.vy = -orb.vy;
 		if (reflectZ) orb.vz = -orb.vz;
+
+		// Update the orb's angle to match the new velocity direction
+		orb.angle = Math.atan2(orb.vy, orb.vx);
 	}
 
 	/**
 	 * Applies soft 3D repulsion forces when orbs' avoidance zones overlap.
-	 * 
-	 * The closer orbs get, the stronger the repulsion force.
-	 * Force is mass-weighted so larger orbs push smaller orbs more.
-	 * Uses deltaTime for frame-rate independent, gradual velocity changes.
-	 * 
-	 * @param orbs - Array of all orbs to check.
-	 * @param vpc - Viewport cell metrics for coordinate conversion.
-	 * @param deltaTime - Time elapsed since last frame in seconds.
-	 * @param repulsionStrength - Base strength of the repulsion acceleration (default 200).
-	 */
+		 * 
+		 * The closer orbs get, the stronger the repulsion force.
+		 * Force is mass-weighted so larger orbs push smaller orbs more.
+		 * Uses deltaTime for frame-rate independent, gradual velocity changes.
+		 * 
+		 * @param orbs - Array of all orbs to check.
+		 * @param vpc - Viewport cell metrics for coordinate conversion.
+		 * @param deltaTime - Time elapsed since last frame in seconds.
+		 * @param repulsionStrength - Base strength of the repulsion acceleration (default 200).
+		 */
 	static applyAvoidanceRepulsion(
 		orbs: Orb[],
 		vpc: ViewportCells,
@@ -227,11 +231,12 @@ export class CollisionSystem {
 
 				const dist = Math.sqrt(distSq);
 
-				// Calculate avoidance radii (matching OrbPhysics formula)
+				// Calculate avoidance radii - smaller zone for subtler avoidance
 				const radiusA = orbA.size - 1;
 				const radiusB = orbB.size - 1;
-				const avoidanceA = Math.floor(Math.sqrt(orbA.size) + radiusA + 1);
-				const avoidanceB = Math.floor(Math.sqrt(orbB.size) + radiusB + 1);
+				// Reduced avoidance zone: just 0.5 cells beyond the body radius
+				const avoidanceA = radiusA + 0.5;
+				const avoidanceB = radiusB + 0.5;
 
 				// Combined avoidance radius (when zones start to overlap)
 				const combinedAvoidance = avoidanceA + avoidanceB;
@@ -271,6 +276,10 @@ export class CollisionSystem {
 						orbB.vx += accelB * nx * deltaTime;
 						orbB.vy += accelB * ny * deltaTime;
 						orbB.vz += accelB * nz * deltaTime;
+
+						// Update angles to match new velocity directions
+						orbA.angle = Math.atan2(orbA.vy, orbA.vx);
+						orbB.angle = Math.atan2(orbB.vy, orbB.vx);
 					}
 				}
 			}
@@ -296,8 +305,8 @@ export class CollisionSystem {
 		mouseX: number,
 		mouseY: number,
 		deltaTime: number,
-		repulsionRadius: number = 200,
-		repulsionStrength: number = 200
+		repulsionRadius: number = 150,
+		repulsionStrength: number = 80
 	): void {
 		// Skip if mouse position is invalid
 		if (!isFinite(mouseX) || !isFinite(mouseY)) return;
@@ -330,6 +339,9 @@ export class CollisionSystem {
 			if (isFinite(acceleration) && isFinite(nx) && isFinite(ny)) {
 				orb.vx += acceleration * nx * deltaTime;
 				orb.vy += acceleration * ny * deltaTime;
+
+				// Update angle to match new velocity direction
+				orb.angle = Math.atan2(orb.vy, orb.vx);
 			}
 		}
 	}
@@ -377,7 +389,6 @@ export class CollisionSystem {
 				const minDist = radiusA + radiusB + 1;
 
 				if (distSq < minDist * minDist && distSq > 0.001) {
-					// Collision detected
 					const dist = Math.sqrt(distSq);
 					const nx = dx / dist;
 					const ny = dy / dist;
@@ -392,8 +403,9 @@ export class CollisionSystem {
 					const overlap = minDist - dist;
 					if (overlap > 0) {
 						// Distribute separation based on mass (smaller orbs move more)
-						const separationA = (overlap * massB / totalMass) * 0.5;
-						const separationB = (overlap * massA / totalMass) * 0.5;
+						// Use 1.1x to fully separate plus a small buffer to prevent re-collision
+						const separationA = (overlap * massB / totalMass) * 1.1;
+						const separationB = (overlap * massA / totalMass) * 1.1;
 
 						// Convert back to pixel space for XY, keep Z in layers
 						const cellSizeXPx = 1 / vpc.invCellSizeXPx;
@@ -420,10 +432,11 @@ export class CollisionSystem {
 
 					// Only resolve velocity if objects are approaching each other
 					if (dvn > 0 && isFinite(dvn)) {
-						// Mass-weighted impulse factors
-						// Smaller orbs get pushed more, larger orbs get pushed less
-						const impulseA = (2 * massB / totalMass) * dvn;
-						const impulseB = (2 * massA / totalMass) * dvn;
+						// Mass-weighted impulse factors with reduced elasticity
+						// Using 0.8 instead of 2.0 for softer, less oscillation-prone collisions
+						const elasticity = 0.8;
+						const impulseA = (elasticity * massB / totalMass) * dvn;
+						const impulseB = (elasticity * massA / totalMass) * dvn;
 
 						// Guard against NaN propagation
 						if (isFinite(impulseA) && isFinite(impulseB)) {
@@ -433,6 +446,10 @@ export class CollisionSystem {
 							orbB.vx += impulseB * nx;
 							orbB.vy += impulseB * ny;
 							orbB.vz += impulseB * nz;
+
+							// Update angles to match new velocity directions
+							orbA.angle = Math.atan2(orbA.vy, orbA.vx);
+							orbB.angle = Math.atan2(orbB.vy, orbB.vx);
 						}
 					}
 				}

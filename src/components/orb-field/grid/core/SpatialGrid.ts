@@ -219,4 +219,17 @@ export class SpatialGrid {
 		const state = this.getCell(cellX, cellY, layer);
 		return hasCellFlag(state, CELL_FILLED) || hasCellFlag(state, CELL_BORDER);
 	}
+
+	/**
+	 * Checks if a cell is blocked by an actual WALL (border or out-of-bounds).
+	 * Unlike isBlocking(), this does NOT treat other orbs (CELL_FILLED) as blocking.
+	 * Use this for wall collision detection to avoid treating orbs as walls.
+	 */
+	isWall(cellX: number, cellY: number, layer: number): boolean {
+		// Out of bounds = wall (implicit walls at grid boundaries)
+		if (!this.isInBounds(cellX, cellY, layer)) return true;
+
+		const state = this.getCell(cellX, cellY, layer);
+		return hasCellFlag(state, CELL_BORDER);
+	}
 }

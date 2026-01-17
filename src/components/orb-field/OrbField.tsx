@@ -275,30 +275,24 @@ export function OrbField({
 				OrbPhysics.markOrbCircular(grid, orb, vpc.startCellX, vpc.startCellY, vpc.invCellSizeXPx, vpc.invCellSizeYPx);
 			}
 
-			// Phase 2: Apply soft avoidance repulsion (when avoidance zones overlap)
-			CollisionSystem.applyAvoidanceRepulsion(currentOrbs, vpc, deltaTime);
-
-			// Phase 2.5: Apply mouse repulsion (2D only, affects all orbs once regardless of z-layer)
+			// Phase 2: Apply mouse repulsion (2D only, affects all orbs once regardless of z-layer)
 			const mousePos = mousePosRef.current;
 			if (mousePos) {
 				CollisionSystem.applyMouseRepulsion(currentOrbs, mousePos.x, mousePos.y, deltaTime);
 			}
 
-			// Phase 3: Resolve orb-orb hard collisions (mutual elastic bounce)
-			CollisionSystem.resolveOrbOrbCollisions(currentOrbs, vpc);
-
-			// Phase 4: Apply speed limits (larger orbs are slower)
+			// Phase 3: Apply speed limits (larger orbs are slower)
 			const { baseMaxSpeed, minMaxSpeed, decelerationRate } = DEFAULT_SPEED_LIMIT_CONFIG;
 			for (const orb of currentOrbs) {
 				OrbPhysics.applySpeedLimit(orb, baseMaxSpeed, minMaxSpeed, decelerationRate, deltaTime);
 			}
 
-			// Phase 5: Apply wander behavior (organic velocity drift)
+			// Phase 4: Apply wander behavior (organic velocity drift)
 			for (const orb of currentOrbs) {
 				OrbPhysics.applyWander(orb, deltaTime);
 			}
 
-			// Phase 6: Apply layer attraction (orbs drift toward preferred depth)
+			// Phase 5: Apply layer attraction (orbs drift toward preferred depth)
 			const { maxSize } = DEFAULT_ORB_SPAWN_CONFIG;
 			const { attractionStrength } = DEFAULT_LAYER_ATTRACTION_CONFIG;
 			const totalLayers = grid.config.layers;
@@ -313,7 +307,7 @@ export function OrbField({
 
 			// Phase 7: Check border/wall collisions for each orb (3D) AFTER movement
 			for (const orb of currentOrbs) {
-				// Temporarily clear this orb's cells to check collision with walls and other orbs
+				// Temporarily clear this orb's cells
 				OrbPhysics.clearOrbCircular(grid, orb, vpc.startCellX, vpc.startCellY, vpc.invCellSizeXPx, vpc.invCellSizeYPx);
 
 				const collision = CollisionSystem.checkMove(orb, deltaTime, grid, vpc);
@@ -323,7 +317,7 @@ export function OrbField({
 
 				if (collision.blocked) {
 					// Revert the movement and reflect velocity
-					OrbPhysics.updatePosition(orb, -deltaTime); // Undo movement
+					OrbPhysics.updatePosition(orb, -deltaTime);
 					CollisionSystem.applyReflection(orb, collision.reflectX, collision.reflectY, collision.reflectZ);
 				}
 			}
