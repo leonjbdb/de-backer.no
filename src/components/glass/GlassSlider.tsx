@@ -27,6 +27,7 @@ export function GlassSlider({ visible, opacity = 1, onSlideComplete }: GlassSlid
     const [hasEverShown, setHasEverShown] = useState(false);
     const [canShowFirstTime, setCanShowFirstTime] = useState(false);
     const [isDebugMode, setIsDebugMode] = useState(false);
+    const [debugModeWasActiveThisSession, setDebugModeWasActiveThisSession] = useState(false);
     
     // Refs for animation
     const animationRef = useRef<number | null>(null);
@@ -40,6 +41,10 @@ export function GlassSlider({ visible, opacity = 1, onSlideComplete }: GlassSlid
         setIsDebugMode(debugEnabled);
         // Set initial position based on debug mode
         setPosition(debugEnabled ? 1 : 0);
+        // If debug mode is enabled on mount, mark it as active this session
+        if (debugEnabled) {
+            setDebugModeWasActiveThisSession(true);
+        }
     }, []);
 
     // Handle first-time delay (10 seconds)
@@ -56,16 +61,17 @@ export function GlassSlider({ visible, opacity = 1, onSlideComplete }: GlassSlid
 
     // Handle visibility fade-in based on opacity
     useEffect(() => {
-        // If we've shown before, OR if it's first time and delay is complete
-        const shouldShow = hasEverShown || canShowFirstTime;
+        // If we've shown before, OR if it's first time and delay is complete, OR debug mode is/was on
+        const shouldShow = hasEverShown || canShowFirstTime || isDebugMode || debugModeWasActiveThisSession;
         
-        if (opacity > 0.01 && !hasAppeared && shouldShow) {
-            // Small delay to ensure smooth fade-in
-            const timer = setTimeout(() => setHasAppeared(true), 50);
+        if ((opacity > 0.01 || debugModeWasActiveThisSession) && !hasAppeared && shouldShow) {
+            // Small delay to ensure smooth fade-in (skip delay if debug mode was ever active)
+            const timer = setTimeout(() => setHasAppeared(true), debugModeWasActiveThisSession ? 0 : 50);
             return () => clearTimeout(timer);
         }
         // Keep hasAppeared true even when fading out to allow smooth transition
-    }, [opacity, hasAppeared, hasEverShown, canShowFirstTime]);
+        // Also keep it true if debug mode was ever enabled this session
+    }, [opacity, hasAppeared, hasEverShown, canShowFirstTime, isDebugMode, debugModeWasActiveThisSession]);
 
     // Cancel any ongoing animation
     const cancelAnimation = useCallback(() => {
@@ -116,6 +122,11 @@ export function GlassSlider({ visible, opacity = 1, onSlideComplete }: GlassSlid
                 if (newDebugMode !== isDebugMode) {
                     setIsDebugMode(newDebugMode);
                     localStorage.setItem(DEBUG_MODE_KEY, String(newDebugMode));
+                    
+                    // Mark that debug mode was active this session
+                    if (newDebugMode) {
+                        setDebugModeWasActiveThisSession(true);
+                    }
                     
                     // Dispatch custom event to notify OrbField
                     window.dispatchEvent(new CustomEvent('debugModeChanged', { 
@@ -243,6 +254,12 @@ export function GlassSlider({ visible, opacity = 1, onSlideComplete }: GlassSlid
     // At position 1 (right): points left (-180deg, rotating upwards)
     const arrowRotation = -(position * 180);
 
+    // Keep slider visible if debug mode is currently on OR was ever active this session
+    // Only hide after page reload when debug mode is off
+    const keepVisible = isDebugMode || debugModeWasActiveThisSession;
+    const finalOpacity = keepVisible ? 1 : (hasAppeared ? opacity : 0);
+    const finalVisibility = keepVisible ? "visible" : ((hasAppeared && opacity > 0.01) || opacity > 0.5 ? "visible" : "hidden");
+
     return (
         <div
             style={{
@@ -251,11 +268,11 @@ export function GlassSlider({ visible, opacity = 1, onSlideComplete }: GlassSlid
                 left: "50%",
                 transform: "translateX(-50%)",
                 zIndex: 9999,
-                opacity: hasAppeared ? opacity : 0,
+                opacity: finalOpacity,
                 transition: "opacity 0.6s cubic-bezier(0.4, 0, 0.2, 1)",
                 willChange: "opacity",
                 pointerEvents: "auto",  // Always allow interaction when rendered
-                visibility: (hasAppeared && opacity > 0.01) || opacity > 0.5 ? "visible" : "hidden",
+                visibility: finalVisibility,
             }}
         >
             {/* Glass track container */}
