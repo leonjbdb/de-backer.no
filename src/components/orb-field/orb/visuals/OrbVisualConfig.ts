@@ -73,15 +73,15 @@ export const DEFAULT_ORB_VISUAL_CONFIG: OrbVisualConfig = {
 	glowIntensity: 1.0,
 	glowSpread: 5.0,       // Very large glow radius for soft, diffused edges
 
-	// Depth blur - all orbs are soft and diffused
-	minBlurSoftness: 0.7,  // Close orbs are still quite soft
-	maxBlurSoftness: 0.98, // Far orbs are extremely diffused
+	// Depth blur - soft and diffused, but cores remain visible
+	minBlurSoftness: 0.5,  // Close orbs have moderate softness
+	maxBlurSoftness: 0.85, // Far orbs are soft but still have visible cores
 
 	// Opacity - controls overall visibility
-	minOpacity: 0.3,       // Distant orbs still visible
+	minOpacity: 0.7,       // Distant orbs remain quite visible
 	maxOpacity: 1.0,       // Close orbs at full strength (gradient handles falloff)
 
-	// Size scaling
-	baseRadiusPx: 30,      // Larger base for better glow visibility
-	sizeExponent: 0.7,     // Sub-linear scaling for size variety
+	// Size scaling - larger orbs are significantly bigger visually
+	baseRadiusPx: 35,      // Base radius for size 1 orbs
+	sizeExponent: 0.85,    // Near-linear scaling so large orbs are visually much bigger
 };

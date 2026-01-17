@@ -28,10 +28,13 @@ interface WindowSize {
 export class OrbVisualRenderer {
 	/**
 	 * Renders all orbs to the canvas with visual effects.
+	 * 
+	 * All orbs across ALL z-layers are rendered, sorted back-to-front.
+	 * Depth affects opacity and blur but does not filter visibility.
 	 *
 	 * @param ctx - The 2D canvas rendering context.
 	 * @param windowSize - Current window dimensions.
-	 * @param orbs - Array of orbs to render.
+	 * @param orbs - Array of orbs to render (from ALL layers).
 	 * @param totalLayers - Total number of z-layers in the system.
 	 * @param config - Visual configuration for orb appearance.
 	 */
@@ -50,15 +53,16 @@ export class OrbVisualRenderer {
 		// Skip if no orbs
 		if (orbs.length === 0) return;
 
-		// Sort orbs by z-depth (back to front) for proper layering
+		// Sort ALL orbs by z-depth (back to front) for proper layering
 		// Higher z = further back = render first
+		// NOTE: No layer filtering - all orbs from all z-layers are rendered
 		const sortedOrbs = [...orbs].sort((a, b) => b.z - a.z);
 
 		// Use 'screen' blend mode for additive-like blending
 		// This makes overlapping orbs blend together nicely (brighter where they overlap)
 		ctx.globalCompositeOperation = 'screen';
 
-		// Render each orb on ALL layers (no layer filtering)
+		// Render ALL orbs (no layer filtering)
 		for (const orb of sortedOrbs) {
 			this.drawOrb(ctx, orb, totalLayers, config);
 		}
@@ -162,19 +166,19 @@ export class OrbVisualRenderer {
 
 		// Calculate brightened center for glowing effect
 		// The core is brighter (higher lightness) to simulate internal luminosity
-		const coreLightness = Math.min(baseLightness + 30, 50);
-		const innerLightness = Math.min(baseLightness + 20, 40);
-		const midLightness = Math.min(baseLightness + 10, 30);
+		const coreLightness = Math.min(baseLightness + 35, 55);
+		const innerLightness = Math.min(baseLightness + 22, 42);
+		const midLightness = Math.min(baseLightness + 12, 32);
 
-		// Very soft opacity curve - starts fading immediately from center
-		// blurSoftness controls how quickly opacity drops off (higher = faster fade = softer)
-		const coreOpacity = opacity * 0.7;
-		const innerOpacity = opacity * 0.45 * (1 - blurSoftness * 0.3);
-		const midOpacity = opacity * 0.25 * (1 - blurSoftness * 0.5);
-		const glowOpacity = opacity * glowIntensity * 0.12;
-		const outerOpacity = opacity * glowIntensity * 0.04;
+		// Opacity curve - make sure distant orbs remain visible
+		// Keep core relatively high opacity even for distant orbs
+		const coreOpacity = opacity * 0.9;  // Increased from 0.7
+		const innerOpacity = opacity * 0.65 * (1 - blurSoftness * 0.25); // Increased from 0.45
+		const midOpacity = opacity * 0.4 * (1 - blurSoftness * 0.4);      // Increased from 0.25
+		const glowOpacity = opacity * glowIntensity * 0.2;                 // Increased from 0.12
+		const outerOpacity = opacity * glowIntensity * 0.08;               // Increased from 0.04
 
-		// Colors with very gradual opacity falloff for soft, diffused look
+		// Colors with gradual opacity falloff for soft, diffused look
 		const coreColor = `hsla(${baseHue}, ${baseSaturation}%, ${coreLightness}%, ${coreOpacity})`;
 		const innerColor = `hsla(${baseHue}, ${baseSaturation}%, ${innerLightness}%, ${innerOpacity})`;
 		const midColor = `hsla(${baseHue}, ${baseSaturation}%, ${midLightness}%, ${midOpacity})`;
@@ -182,20 +186,25 @@ export class OrbVisualRenderer {
 		const outerGlow = `hsla(${baseHue}, ${baseSaturation}%, ${baseLightness}%, ${outerOpacity})`;
 		const transparentColor = `hsla(${baseHue}, ${baseSaturation}%, ${baseLightness}%, 0)`;
 
-		// Very early fade stops for extremely soft, diffused edges
-		// The gradient fades out across most of the radius for a bokeh-like blur effect
-		const stop1 = 0.0;                          // Center - brightest
-		const stop2 = 0.05 * (1 - blurSoftness);    // Core fades very early
-		const stop3 = 0.12 * (1 - blurSoftness * 0.5);
-		const stop4 = 0.25;                         // Mid fade
-		const stop5 = 0.45;                         // Glow region
-		const stop6 = 0.7;                          // Outer glow
+		// Gradient stops for soft, diffused edges with visible core
+		// Even very blurry orbs keep a minimum core size for visibility
+		// blurSoftness affects how quickly it fades, but core remains visible
+		const minCoreSize = 0.08;  // Minimum 8% of radius is core
+		const minInnerSize = 0.15; // Minimum 15% for inner color
+
+		// Calculate stops - blur softness reduces core size but with minimums
+		const stop1 = 0.0;                                                    // Center - brightest
+		const stop2 = Math.max(minCoreSize, 0.15 * (1 - blurSoftness * 0.7)); // Core end
+		const stop3 = Math.max(minInnerSize, 0.25 * (1 - blurSoftness * 0.5)); // Inner end
+		const stop4 = 0.35;                                                   // Mid fade
+		const stop5 = 0.55;                                                   // Glow region
+		const stop6 = 0.75;                                                   // Outer glow
 		// stop 1.0 = fully transparent
 
-		// Add gradient color stops for ultra-soft, diffused glow
+		// Add gradient color stops for soft, diffused glow with visible cores
 		gradient.addColorStop(stop1, coreColor);
-		gradient.addColorStop(Math.max(0.02, stop2), coreColor);
-		gradient.addColorStop(Math.max(0.05, stop3), innerColor);
+		gradient.addColorStop(stop2, coreColor);
+		gradient.addColorStop(stop3, innerColor);
 		gradient.addColorStop(stop4, midColor);
 		gradient.addColorStop(stop5, glowColor);
 		gradient.addColorStop(stop6, outerGlow);
