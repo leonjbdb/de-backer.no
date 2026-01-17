@@ -43,6 +43,10 @@ interface OrbFieldProps {
 	revealConfig?: Partial<GridRevealConfig>;
 	/** Overrides for visual style configuration. */
 	styleConfig?: Partial<GridStyleConfig>;
+	/** When true, triggers the orb burst explosion. Should transition from false to true once. */
+	triggerBurst?: boolean;
+	/** Callback fired when grid roll animation completes. */
+	onAnimationComplete?: () => void;
 }
 
 /**
@@ -62,6 +66,8 @@ export function OrbField({
 	opacity = DEFAULT_ORBFIELD_CONFIG.defaultOpacity,
 	revealConfig: revealOverrides,
 	styleConfig: styleOverrides,
+	triggerBurst = false,
+	onAnimationComplete,
 }: OrbFieldProps) {
 	// =========================================================================
 	// Refs for High-Performance Loop (No Re-renders)
@@ -83,6 +89,7 @@ export function OrbField({
 	const isPausedRef = useRef(false);
 	const burstTimeRef = useRef<number | null>(null); // Track when burst happened for delayed continuous spawning
 	const mousePosRef = useRef<{ x: number; y: number } | null>(null); // Track mouse position for orb repulsion
+	const hasBurstRef = useRef(false); // Track if burst has already happened (prevent double burst)
 
 	// =========================================================================
 	// React State for UI
@@ -423,16 +430,10 @@ export function OrbField({
 			() => {
 				hasAnimatedRef.current = true;
 
-				// Spawn orb burst from center after grid reveal completes
-				const grid = gridRef.current;
-				const vpc = viewportCellsRef.current;
-				const ws = windowSizeRef.current;
-				if (grid && vpc && ws.width > 0) {
-					const centerX = ws.width / 2;
-					const centerY = ws.height / 2;
-					spawnOrbBurst(centerX, centerY, grid, vpc);
-					burstTimeRef.current = performance.now(); // Record burst time for delayed continuous spawning
-				}
+				// Notify parent that grid animation is complete
+				onAnimationComplete?.();
+
+				// Orb burst is now triggered by triggerBurst prop, not grid animation completion
 
 				// Continue with physics loop after reveal
 				const physicsLoop = () => {
@@ -456,7 +457,44 @@ export function OrbField({
 			if (loopIdRef.current) cancelAnimationFrame(loopIdRef.current);
 			hasAnimatedRef.current = false;
 		};
-	}, [visible, gridConfig, runLoop, revealConfig.duration, spawnOrbBurst]);
+	}, [visible, gridConfig, runLoop, revealConfig.duration, onAnimationComplete]);
+
+	// =========================================================================
+	// 4b. Orb Burst Trigger (Controlled by Parent)
+	// =========================================================================
+	// Store triggerBurst in a ref so the physics loop can check it
+	const triggerBurstRef = useRef(triggerBurst);
+	useEffect(() => {
+		triggerBurstRef.current = triggerBurst;
+	}, [triggerBurst]);
+
+	// Check for burst trigger in the physics loop (runLoop) via a helper
+	// This ensures grid is ready since runLoop only runs after animation starts
+	useEffect(() => {
+		// Poll for burst trigger after grid is ready
+		if (!triggerBurst || hasBurstRef.current) return;
+
+		const checkAndBurst = () => {
+			if (hasBurstRef.current) return;
+
+			const grid = gridRef.current;
+			const vpc = viewportCellsRef.current;
+			const ws = windowSizeRef.current;
+
+			if (grid && vpc && ws.width > 0 && hasAnimatedRef.current) {
+				hasBurstRef.current = true;
+				const centerX = ws.width / 2;
+				const centerY = ws.height / 2;
+				spawnOrbBurst(centerX, centerY, grid, vpc);
+				burstTimeRef.current = performance.now();
+			} else {
+				// Grid not ready yet, try again next frame
+				requestAnimationFrame(checkAndBurst);
+			}
+		};
+
+		checkAndBurst();
+	}, [triggerBurst, spawnOrbBurst]);
 
 	// =========================================================================
 	// 5. Interaction Handlers

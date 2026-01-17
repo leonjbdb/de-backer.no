@@ -1,5 +1,6 @@
 "use client";
 
+import { useState, useCallback } from "react";
 import { useTheme } from "@/components/providers";
 import { ScrollDotIndicator } from "@/components/ui/ScrollDotIndicator";
 import { GridView } from "@/components/orb-field";
@@ -29,6 +30,12 @@ export function HomePage({ initialSection }: HomePageProps) {
 
     // Skip animation when starting from a specific section
     const skipAnimation = initialSection !== undefined;
+
+    // Track when grid animation completes (for skipAnimation case)
+    const [gridAnimationComplete, setGridAnimationComplete] = useState(false);
+    const handleGridAnimationComplete = useCallback(() => {
+        setGridAnimationComplete(true);
+    }, []);
 
     // Animation stage management (intro sequence)
     const { stage, isReady } = useAnimationStages({ skipAnimation });
@@ -72,8 +79,13 @@ export function HomePage({ initialSection }: HomePageProps) {
                 }
             `}</style>
 
-            {/* 3D Spatial Grid */}
-            <GridView visible={stage >= 2} />
+            {/* 3D Spatial Grid - Show from the beginning to play roll animation */}
+            {/* Burst triggers at stage 2 (when Hi! bursts) OR when grid animation completes (skip case) */}
+            <GridView 
+                visible={true} 
+                triggerBurst={stage >= 2 || (skipAnimation && gridAnimationComplete)}
+                onAnimationComplete={handleGridAnimationComplete}
+            />
 
             <main
                 className={`${styles.homepage} ${stage >= 2 ? styles.homepagePopped : ""}`}
@@ -88,14 +100,18 @@ export function HomePage({ initialSection }: HomePageProps) {
                 )}
 
                 {/* Card carousel (Profile, Links, Contact) */}
-                <CardCarousel visibility={visibility} isReady={isReady} />
+                {/* When skipping animation, wait for grid animation to complete before showing cards */}
+                <CardCarousel 
+                    visibility={visibility} 
+                    isReady={skipAnimation ? gridAnimationComplete : isReady} 
+                />
 
                 {/* Dot navigation indicator */}
                 <ScrollDotIndicator
                     totalSections={3}
                     activeSection={activeSection}
                     onDotClick={handleDotClick}
-                    visible={isReady}
+                    visible={skipAnimation ? gridAnimationComplete : isReady}
                     theme={theme}
                 />
             </main>
