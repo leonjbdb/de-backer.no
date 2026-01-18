@@ -2,6 +2,7 @@
 
 import { useRef, useState, useEffect, useCallback } from "react";
 import { useDebugSafe } from "@/components/debug/DebugContext";
+import { useInteraction3D } from "./hooks";
 
 interface GlassSliderProps {
 	visible: boolean;
@@ -24,13 +25,17 @@ export function GlassSlider({ opacity = 1, onSlideComplete }: GlassSliderProps) 
 	const trackRef = useRef<HTMLDivElement>(null);
 	const [position, setPosition] = useState(0); // 0 = left, 1 = right
 	const [isDragging, setIsDragging] = useState(false);
-	const [isHovering, setIsHovering] = useState(false);
 	const [hasAppeared, setHasAppeared] = useState(false);
 	const [hasEverShown, setHasEverShown] = useState(false);
 	const [canShowFirstTime, setCanShowFirstTime] = useState(false);
 	const [isDebugMode, setIsDebugMode] = useState(false);
 	const [debugModeWasActiveThisSession, setDebugModeWasActiveThisSession] = useState(false);
 	const [isMobile, setIsMobile] = useState(false);
+
+	// Use unified interaction hook for handle hover state
+	const { isActive: isHovering, interactionProps: handleInteractionProps } = useInteraction3D({
+		trigger: 'hover',
+	});
 
 	// Refs for animation
 	const animationRef = useRef<number | null>(null);
@@ -369,8 +374,7 @@ export function GlassSlider({ opacity = 1, onSlideComplete }: GlassSliderProps) 
 					onTouchStart={handleTouchStart}
 					onTouchMove={handleTouchMove}
 					onTouchEnd={handleTouchEnd}
-					onMouseEnter={() => setIsHovering(true)}
-					onMouseLeave={() => setIsHovering(false)}
+					{...handleInteractionProps}
 					style={{
 						position: "absolute",
 						top: "50%",

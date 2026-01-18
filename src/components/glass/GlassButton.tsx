@@ -1,6 +1,7 @@
 "use client";
 
-import { ReactNode, useState, useRef, useCallback, useEffect } from "react";
+import { ReactNode } from "react";
+import { useInteraction3D } from "./hooks";
 import styles from "./GlassButton.module.css";
 
 interface GlassButtonProps {
@@ -18,50 +19,16 @@ interface GlassButtonProps {
  * because it's used by other components for focus management and keyboard navigation.
  */
 export function GlassButton({ icon, label, href, target, rel }: GlassButtonProps) {
-	const [isHovered, setIsHovered] = useState(false);
-	const timeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
-	const supportsHover = typeof window !== 'undefined' && window.matchMedia('(hover: hover)').matches;
-
-	const handleMouseEnter = useCallback(() => {
-		if (timeoutRef.current) {
-			clearTimeout(timeoutRef.current);
-			timeoutRef.current = null;
-		}
-		setIsHovered(true);
-	}, []);
-
-	const handleMouseLeave = useCallback(() => {
-		// Small delay before removing hover to prevent flickering at edges
-		timeoutRef.current = setTimeout(() => {
-			setIsHovered(false);
-		}, 100);
-	}, []);
-
-	const handleFocus = useCallback(() => {
-		if (timeoutRef.current) {
-			clearTimeout(timeoutRef.current);
-			timeoutRef.current = null;
-		}
-		setIsHovered(true);
-	}, []);
-
-	const handleBlur = useCallback(() => {
-		setIsHovered(false);
-	}, []);
-
-	useEffect(() => {
-		return () => {
-			if (timeoutRef.current) {
-				clearTimeout(timeoutRef.current);
-			}
-		};
-	}, []);
+	const { isActive, interactionProps } = useInteraction3D({
+		trigger: 'hover',
+		enableFocus: true,
+	});
 
 	// Build className - 'glass-button-link' is kept for cross-component compatibility
 	const linkClassName = [
 		styles.link,
 		'glass-button-link',
-		isHovered ? styles.isHovered : '',
+		isActive ? styles.isHovered : '',
 	].filter(Boolean).join(' ');
 
 	return (
@@ -70,10 +37,7 @@ export function GlassButton({ icon, label, href, target, rel }: GlassButtonProps
 			target={target}
 			rel={rel}
 			className={linkClassName}
-			onMouseEnter={supportsHover ? handleMouseEnter : undefined}
-			onMouseLeave={supportsHover ? handleMouseLeave : undefined}
-			onFocus={handleFocus}
-			onBlur={handleBlur}
+			{...interactionProps}
 		>
 			<div className={styles.content}>
 				<span className={styles.icon}>

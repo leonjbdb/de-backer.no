@@ -12,6 +12,16 @@ export const siteConfig = {
 
 	links: [
 		{
+			label: "UiO Profile",
+			href: "https://people.uio.no/leon",
+			icon: "uio",
+		},
+		{
+			label: "LinkedIn",
+			href: "https://www.linkedin.com/in/leonjbdb/",
+			icon: "linkedin",
+		},
+		{
 			label: "GitHub (Work)",
 			href: "https://github.com/leon-uio",
 			icon: "github",
@@ -20,17 +30,7 @@ export const siteConfig = {
 			label: "GitHub (Personal)",
 			href: "https://github.com/leonjbdb",
 			icon: "github",
-		},
-		{
-			label: "LinkedIn",
-			href: "https://www.linkedin.com/in/leonjbdb/",
-			icon: "linkedin",
-		},
-		{
-			label: "UiO Profile",
-			href: "https://people.uio.no/leon",
-			icon: "uio",
-		},
+		}
 	],
 
 	contact: {
