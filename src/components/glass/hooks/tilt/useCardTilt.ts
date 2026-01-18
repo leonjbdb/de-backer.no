@@ -40,7 +40,7 @@ export interface UseCardTiltResult {
  * Follows Single Responsibility Principle by delegating to focused sub-hooks
  */
 export function useCardTilt(options: UseCardTiltOptions): UseCardTiltResult {
-	const { cardRef, cardId, isTouchDevice, tiltX, tiltY, hasPermission } = options;
+	const { cardRef, cardId, isTouchDevice, tiltX, tiltY } = options;
 
 	const [isHovering, setIsHovering] = useState(false);
 
@@ -57,12 +57,13 @@ export function useCardTilt(options: UseCardTiltOptions): UseCardTiltResult {
 	});
 
 	// Mobile: Device orientation tilt
-	const hasOrientationData = hasPermission || (tiltX !== 0.5 || tiltY !== 0.5);
-	let mobileTiltTransform: string | null = null;
-
-	if (isTouchDevice && hasOrientationData) {
-		mobileTiltTransform = calculateOrientationTilt(tiltX, tiltY, tiltDefaults.mobileTiltMaxAngle);
-	}
+	// On touch devices, always calculate the tilt from orientation data
+	// When no orientation data is available (tiltX=0.5, tiltY=0.5), 
+	// this returns the identity transform (0deg, 0deg)
+	// Note: hasPermission indicates if device orientation sensors are accessible
+	const mobileTiltTransform = isTouchDevice
+		? calculateOrientationTilt(tiltX, tiltY, tiltDefaults.mobileTiltMaxAngle)
+		: null;
 
 	// Desktop: Mouse-based tilt on hover
 	useEffect(() => {

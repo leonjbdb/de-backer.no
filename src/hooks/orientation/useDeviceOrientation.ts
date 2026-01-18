@@ -105,7 +105,7 @@ export function useDeviceOrientation(): DeviceOrientation {
 		startLoop();
 	}, [handleOrientation, startLoop]);
 
-	const requestPermission = useCallback(async () => {
+	const requestPermission = useCallback(() => {
 		if (permissionRequestedRef.current) return;
 		permissionRequestedRef.current = true;
 
@@ -115,48 +115,69 @@ export function useDeviceOrientation(): DeviceOrientation {
 		};
 
 		if (typeof DeviceOrientationEvent !== 'undefined' && DOE.requestPermission) {
-			try {
-				const permission = await DOE.requestPermission();
-				if (permission === 'granted') {
-					setHasPermission(true);
-					startListening();
-				} else {
+			// iOS 13+: Must call requestPermission synchronously within user gesture
+			// The Promise resolution can be async, but the call must be sync
+			DOE.requestPermission()
+				.then((permission) => {
+					if (permission === 'granted') {
+						setHasPermission(true);
+						startListening();
+					} else {
+						// Permission denied - allow retry on next interaction
+						permissionRequestedRef.current = false;
+					}
+				})
+				.catch(() => {
+					// Error occurred - allow retry on next interaction
 					permissionRequestedRef.current = false;
-				}
-			} catch {
-				permissionRequestedRef.current = false;
-			}
+				});
 		} else if (typeof DeviceOrientationEvent !== 'undefined') {
+			// Non-iOS: No permission needed
 			setHasPermission(true);
 			startListening();
 		}
 	}, [startListening]);
 
 	useEffect(() => {
+		// Track if we've set up touch listeners
+		let touchListenersActive = false;
+
 		const handleFirstTouch = () => {
 			requestPermission();
-			window.removeEventListener('touchstart', handleFirstTouch);
-			window.removeEventListener('click', handleFirstTouch);
+			// Remove listeners after first interaction
+			if (touchListenersActive) {
+				window.removeEventListener('touchstart', handleFirstTouch);
+				window.removeEventListener('click', handleFirstTouch);
+				touchListenersActive = false;
+			}
 		};
-
-		window.addEventListener('touchstart', handleFirstTouch, { passive: true });
-		window.addEventListener('click', handleFirstTouch, { passive: true });
 
 		const DOE = DeviceOrientationEvent as unknown as {
 			requestPermission?: () => Promise<'granted' | 'denied'>;
 		};
 
-		if (typeof DeviceOrientationEvent !== 'undefined' && !DOE.requestPermission) {
-			queueMicrotask(() => {
-				setHasPermission(true);
-			});
-			startListening();
+		// Check if we need permission (iOS) or can start immediately (Android/desktop)
+		if (typeof DeviceOrientationEvent !== 'undefined') {
+			if (DOE.requestPermission) {
+				// iOS 13+: Need to request permission on user interaction
+				window.addEventListener('touchstart', handleFirstTouch, { passive: true });
+				window.addEventListener('click', handleFirstTouch, { passive: true });
+				touchListenersActive = true;
+			} else {
+				// Non-iOS: No permission needed, start listening immediately
+				queueMicrotask(() => {
+					setHasPermission(true);
+				});
+				startListening();
+			}
 		}
 
 		return () => {
 			window.removeEventListener('deviceorientation', handleOrientation);
-			window.removeEventListener('touchstart', handleFirstTouch);
-			window.removeEventListener('click', handleFirstTouch);
+			if (touchListenersActive) {
+				window.removeEventListener('touchstart', handleFirstTouch);
+				window.removeEventListener('click', handleFirstTouch);
+			}
 			stopLoop();
 			listenersSetUpRef.current = false;
 		};

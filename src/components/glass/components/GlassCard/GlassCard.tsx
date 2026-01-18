@@ -119,6 +119,7 @@ export function GlassCard({
 			inert={!isVisible ? true : undefined}
 			style={{
 				position: "relative",
+				perspective: cardDefaults.perspective,
 				transformStyle: "preserve-3d",
 				willChange: "transform, opacity",
 				backfaceVisibility: "hidden",
@@ -131,29 +132,21 @@ export function GlassCard({
 				...styleWithoutTransform,
 			}}
 		>
-			{/* Perspective container - separate from transformed element for proper 3D child rendering */}
+			{/* Glass container with 3D tilt */}
 			<div
+				className="glass-card-container"
 				style={{
-					perspective: cardDefaults.perspective,
+					position: "relative",
+					borderRadius,
+					transform,
+					transition: transitionStyle,
 					transformStyle: "preserve-3d",
 				}}
 			>
-				{/* Glass container with 3D tilt */}
-				<div
-					className="glass-card-container"
-					style={{
-						position: "relative",
-						borderRadius,
-						transform,
-						transition: transitionStyle,
-						transformStyle: "preserve-3d",
-					}}
-				>
-					<GlassCardBackground borderRadius={borderRadius} />
-					<GlassCardContent padding={paddingValue}>
-						{children}
-					</GlassCardContent>
-				</div>
+				<GlassCardBackground borderRadius={borderRadius} />
+				<GlassCardContent padding={paddingValue}>
+					{children}
+				</GlassCardContent>
 			</div>
 		</div>
 	);
