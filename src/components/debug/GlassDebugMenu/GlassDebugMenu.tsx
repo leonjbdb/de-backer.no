@@ -9,8 +9,7 @@ import { ToggleRow } from "./components/ToggleRow";
 import { SectionHeader } from "./components/SectionHeader";
 import { OrbDebugSection } from "./components/OrbDebugSection";
 import { GridDebugSection } from "./components/GridDebugSection";
-import type { DebugState } from "../DebugContext";
-import type { GlassDebugMenuProps, ToggleItem } from "./types";
+import type { GlassDebugMenuProps, ToggleItem, MenuComponentProps } from "./types";
 
 const toggleItems: ToggleItem[] = [
 	{ key: "showGrid", label: "Grid Lines", description: "Spatial grid visualization" },
@@ -93,18 +92,6 @@ export function GlassDebugMenu(props: GlassDebugMenuProps) {
 }
 
 /**
- * Props for internal menu component variants
- */
-interface MenuComponentProps {
-	isOpen: boolean;
-	setIsOpen: (open: boolean) => void;
-	state: DebugState;
-	handleToggle: (key: keyof Omit<DebugState, "enabled">) => void;
-	toggleItems: ToggleItem[];
-	glassStyles: React.CSSProperties;
-}
-
-/**
  * Desktop dropdown menu variant
  */
 function DesktopMenu({
@@ -115,7 +102,7 @@ function DesktopMenu({
 	toggleItems,
 	glassStyles: baseGlassStyles,
 }: MenuComponentProps) {
-	const { dimensions, zIndex, spacing } = debugMenuConfig;
+	const { dimensions, zIndex, spacing, colors } = debugMenuConfig;
 
 	return (
 		<div
@@ -149,9 +136,9 @@ function DesktopMenu({
 				aria-label={isOpen ? "Close debug menu" : "Open debug menu"}
 			>
 				{isOpen ? (
-					<X style={{ width: `${dimensions.iconSize}px`, height: `${dimensions.iconSize}px`, color: "rgba(255, 255, 255, 0.8)" }} />
+					<X style={{ width: `${dimensions.iconSize}px`, height: `${dimensions.iconSize}px`, color: colors.iconDefault }} />
 				) : (
-					<Settings style={{ width: `${dimensions.iconSize}px`, height: `${dimensions.iconSize}px`, color: "rgba(255, 255, 255, 0.8)" }} />
+					<Settings style={{ width: `${dimensions.iconSize}px`, height: `${dimensions.iconSize}px`, color: colors.iconDefault }} />
 				)}
 			</button>
 
@@ -163,13 +150,13 @@ function DesktopMenu({
 						top: `${spacing.dropdownTop}px`,
 						left: "0",
 						width: `${dimensions.dropdownWidth}px`,
-						borderRadius: "12px",
+						borderRadius: `${dimensions.borderRadiusLg}px`,
 						padding: `${spacing.padding}px`,
-						maxHeight: "calc(100vh - 80px)",
+						maxHeight: `calc(100vh - ${spacing.viewportOffset}px)`,
 						overflowY: "auto",
 					}}
 				>
-					<SectionHeader title="Debug Options" icon={<Settings style={{ width: "14px", height: "14px", color: "rgba(255, 255, 255, 0.7)" }} />} />
+					<SectionHeader title="Debug Options" icon={<Settings style={{ width: `${dimensions.sectionIconSize}px`, height: `${dimensions.sectionIconSize}px`, color: colors.iconMuted }} />} />
 
 					<div style={{ display: "flex", flexDirection: "column" }}>
 						{toggleItems.map((item: ToggleItem) => (
@@ -211,7 +198,7 @@ function MobileMenu({
 	onLayerChange,
 	hoveredCell,
 }: MenuComponentProps & GlassDebugMenuProps) {
-	const { dimensions, zIndex, spacing } = debugMenuConfig;
+	const { dimensions, zIndex, spacing, colors } = debugMenuConfig;
 
 	return (
 		<>
@@ -236,9 +223,9 @@ function MobileMenu({
 				aria-label={isOpen ? "Close debug menu" : "Open debug menu"}
 			>
 				{isOpen ? (
-					<X style={{ width: `${dimensions.iconSizeMobile}px`, height: `${dimensions.iconSizeMobile}px`, color: "rgba(255, 255, 255, 0.8)" }} />
+					<X style={{ width: `${dimensions.iconSizeMobile}px`, height: `${dimensions.iconSizeMobile}px`, color: colors.iconDefault }} />
 				) : (
-					<ChevronRight style={{ width: `${dimensions.iconSizeMobile}px`, height: `${dimensions.iconSizeMobile}px`, color: "rgba(255, 255, 255, 0.8)" }} />
+					<ChevronRight style={{ width: `${dimensions.iconSizeMobile}px`, height: `${dimensions.iconSizeMobile}px`, color: colors.iconDefault }} />
 				)}
 			</button>
 
@@ -249,7 +236,7 @@ function MobileMenu({
 					style={{
 						position: "fixed",
 						inset: 0,
-						background: "rgba(0, 0, 0, 0.5)",
+						background: colors.backdropBg,
 						zIndex: zIndex.backdrop,
 					}}
 				/>
@@ -277,7 +264,7 @@ function MobileMenu({
 					touchAction: "pan-y",
 				}}
 			>
-				<SectionHeader title="Debug Options" icon={<Settings style={{ width: "14px", height: "14px", color: "rgba(255, 255, 255, 0.7)" }} />} />
+				<SectionHeader title="Debug Options" icon={<Settings style={{ width: `${dimensions.sectionIconSize}px`, height: `${dimensions.sectionIconSize}px`, color: colors.iconMuted }} />} />
 
 				<div style={{ display: "flex", flexDirection: "column" }}>
 					{toggleItems.map((item: ToggleItem) => (

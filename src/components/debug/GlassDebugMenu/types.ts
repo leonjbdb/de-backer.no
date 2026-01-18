@@ -83,3 +83,15 @@ export interface SectionHeaderProps {
 	title: string;
 	icon?: React.ReactNode;
 }
+
+/**
+ * Props for internal menu component variants
+ */
+export interface MenuComponentProps {
+	isOpen: boolean;
+	setIsOpen: (open: boolean) => void;
+	state: DebugState;
+	handleToggle: (key: keyof Omit<DebugState, "enabled">) => void;
+	toggleItems: ToggleItem[];
+	glassStyles: React.CSSProperties;
+}

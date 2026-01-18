@@ -1,5 +1,6 @@
 "use client";
 
+import { debugMenuConfig } from "../config/debugMenuConfig";
 import type { SectionHeaderProps } from "../types";
 
 /**
@@ -7,16 +8,18 @@ import type { SectionHeaderProps } from "../types";
  * Follows Single Responsibility Principle - only handles section header UI
  */
 export function SectionHeader({ title, icon }: SectionHeaderProps) {
+	const { spacing, typography, colors } = debugMenuConfig;
+
 	return (
 		<div style={{
-			marginBottom: "8px",
-			paddingBottom: "8px",
-			borderBottom: "1px solid rgba(255, 255, 255, 0.1)",
-			marginTop: "16px",
+			marginBottom: `${spacing.gapLg}px`,
+			paddingBottom: `${spacing.gapLg}px`,
+			borderBottom: `1px solid ${colors.borderLight}`,
+			marginTop: `${spacing.marginSection}px`,
 		}}>
-			<div style={{ display: "flex", alignItems: "center", gap: "8px" }}>
+			<div style={{ display: "flex", alignItems: "center", gap: `${spacing.gapLg}px` }}>
 				{icon}
-				<span style={{ fontSize: "12px", fontWeight: 600, color: "rgba(255, 255, 255, 0.9)" }}>
+				<span style={{ fontSize: `${typography.fontSizeLg}px`, fontWeight: typography.fontWeightBold, color: colors.textPrimary }}>
 					{title}
 				</span>
 			</div>

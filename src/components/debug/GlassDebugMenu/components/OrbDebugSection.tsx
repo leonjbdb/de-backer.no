@@ -21,6 +21,7 @@ export function OrbDebugSection({
 	onSizeChange,
 }: OrbDebugProps) {
 	const { minSize, maxSize } = DEFAULT_ORB_SPAWN_CONFIG;
+	const { spacing, typography, colors, dimensions } = debugMenuConfig;
 
 	// Track when the orb selector dropdown is open
 	// When open, we freeze the orbs list to prevent it from updating and making selection impossible
@@ -40,9 +41,9 @@ export function OrbDebugSection({
 			<SectionHeader title={`Orb Debug (${orbs.length}${targetOrbCount ? ` / ${targetOrbCount}` : ''})`} />
 
 			{/* Orb Selector */}
-			<div style={{ display: 'flex', flexDirection: 'column', gap: 4, marginBottom: 8 }}>
-				<label style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', fontSize: 11 }}>
-					<span style={{ color: 'rgba(255, 255, 255, 0.7)' }}>Select:</span>
+			<div style={{ display: 'flex', flexDirection: 'column', gap: spacing.gapSm, marginBottom: spacing.gapLg }}>
+				<label style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', fontSize: typography.fontSizeMd }}>
+					<span style={{ color: colors.textSecondary }}>Select:</span>
 					<select
 						value={selectedOrbId || ''}
 						onChange={(e) => {
@@ -59,13 +60,13 @@ export function OrbDebugSection({
 							setIsOrbSelectorOpen(false);
 						}}
 						style={{
-							background: 'rgba(255, 255, 255, 0.1)',
-							color: 'rgba(255, 255, 255, 0.9)',
-							border: '1px solid rgba(255, 255, 255, 0.15)',
-							borderRadius: 6,
-							fontSize: 10,
-							padding: '4px 6px',
-							maxWidth: 120,
+							background: colors.inputBg,
+							color: colors.textPrimary,
+							border: `1px solid ${colors.inputBorder}`,
+							borderRadius: dimensions.borderRadiusSm,
+							fontSize: typography.fontSizeSm,
+							padding: `${spacing.gapSm}px ${spacing.gapMd}px`,
+							maxWidth: dimensions.selectMaxWidth,
 							cursor: 'pointer',
 						}}
 					>
@@ -81,7 +82,7 @@ export function OrbDebugSection({
 
 			{/* Selected Orb Info */}
 			{selectedOrb && (
-				<div style={{ fontSize: 10, color: 'rgba(255, 255, 255, 0.6)', padding: '8px 0', borderTop: '1px solid rgba(255, 255, 255, 0.1)' }}>
+				<div style={{ fontSize: typography.fontSizeSm, color: colors.textMuted, padding: `${spacing.gapLg}px 0`, borderTop: `1px solid ${colors.borderLight}` }}>
 					Pos: {selectedOrb.pxX.toFixed(0)}, {selectedOrb.pxY.toFixed(0)}, z={selectedOrb.z.toFixed(1)}
 					<br />
 					Size: {selectedOrb.size} | Speed: {selectedOrb.speed.toFixed(1)} px/s
@@ -91,17 +92,17 @@ export function OrbDebugSection({
 			)}
 
 			{/* Delete Button */}
-			<div style={{ display: 'flex', gap: 4, marginBottom: 8 }}>
+			<div style={{ display: 'flex', gap: spacing.gapSm, marginBottom: spacing.gapLg }}>
 				<button
 					onClick={() => selectedOrbId && onDeleteOrb?.(selectedOrbId)}
 					style={{
 						flex: 1,
-						background: debugMenuConfig.colors.maroonButton,
-						color: 'rgba(255, 255, 255, 0.9)',
-						border: '1px solid rgba(255, 255, 255, 0.15)',
-						borderRadius: 6,
-						padding: '6px 4px',
-						fontSize: 10,
+						background: colors.maroonButton,
+						color: colors.textPrimary,
+						border: `1px solid ${colors.inputBorder}`,
+						borderRadius: dimensions.borderRadiusSm,
+						padding: `${spacing.gapMd}px ${spacing.gapSm}px`,
+						fontSize: typography.fontSizeSm,
 						cursor: selectedOrbId ? 'pointer' : 'not-allowed',
 						opacity: selectedOrbId ? 1 : 0.5,
 					}}
@@ -112,10 +113,10 @@ export function OrbDebugSection({
 			</div>
 
 			{/* Brush Size Slider */}
-			<div style={{ display: 'flex', flexDirection: 'column', gap: 4, fontSize: 11 }}>
+			<div style={{ display: 'flex', flexDirection: 'column', gap: spacing.gapSm, fontSize: typography.fontSizeMd }}>
 				<label style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-					<span style={{ color: 'rgba(255, 255, 255, 0.7)' }}>Brush Size:</span>
-					<span style={{ color: 'rgba(255, 255, 255, 0.9)' }}>{orbSize}</span>
+					<span style={{ color: colors.textSecondary }}>Brush Size:</span>
+					<span style={{ color: colors.textPrimary }}>{orbSize}</span>
 				</label>
 				<input
 					type="range"
@@ -127,12 +128,12 @@ export function OrbDebugSection({
 					style={{
 						width: '100%',
 						cursor: 'pointer',
-						accentColor: debugMenuConfig.colors.maroonAccent,
+						accentColor: colors.maroonAccent,
 					}}
 				/>
 			</div>
 
-			<div style={{ fontSize: 9, color: 'rgba(255, 255, 255, 0.4)', fontStyle: 'italic', marginTop: 8 }}>
+			<div style={{ fontSize: typography.fontSizeXs, color: colors.textDisabled, fontStyle: 'italic', marginTop: spacing.gapLg }}>
 				* Tap grid to place orb
 			</div>
 		</>

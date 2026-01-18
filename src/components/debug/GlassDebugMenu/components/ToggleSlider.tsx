@@ -16,7 +16,7 @@ export function ToggleSlider({ checked, onToggle }: ToggleSliderProps) {
 	const [dragPosition, setDragPosition] = useState<number | null>(null);
 	const dragStartRef = useRef<{ x: number; startPosition: number } | null>(null);
 
-	const { dimensions, colors } = debugMenuConfig;
+	const { dimensions, colors, spacing, shadows, transitions } = debugMenuConfig;
 
 	// Use drag position during drag, otherwise derive from checked
 	const position = isDragging && dragPosition !== null ? dragPosition : (checked ? 1 : 0);
@@ -25,12 +25,12 @@ export function ToggleSlider({ checked, onToggle }: ToggleSliderProps) {
 		if (!trackRef.current) return position;
 		const rect = trackRef.current.getBoundingClientRect();
 		const handleWidth = dimensions.handleWidth;
-		const padding = 3;
+		const padding = spacing.sliderPadding;
 		const trackWidth = rect.width - handleWidth - (padding * 2);
 		const trackLeft = rect.left + padding;
 		const relativeX = clientX - trackLeft - (handleWidth / 2);
 		return Math.max(0, Math.min(1, relativeX / trackWidth));
-	}, [position, dimensions.handleWidth]);
+	}, [position, dimensions.handleWidth, spacing.sliderPadding]);
 
 	const handleDragStart = useCallback((clientX: number) => {
 		setIsDragging(true);
@@ -86,7 +86,7 @@ export function ToggleSlider({ checked, onToggle }: ToggleSliderProps) {
 	};
 
 	const handleWidth = dimensions.handleWidth;
-	const padding = 3;
+	const padding = spacing.sliderPadding;
 	const handleLeft = `calc(${padding}px + ${position} * (100% - ${handleWidth}px - ${padding * 2}px))`;
 
 	return (
@@ -103,7 +103,7 @@ export function ToggleSlider({ checked, onToggle }: ToggleSliderProps) {
 					: glassStyles.background.default.background,
 				border: glassStyles.border.default.border,
 				cursor: "pointer",
-				transition: debugMenuConfig.transitions.background,
+				transition: transitions.background,
 				flexShrink: 0,
 			}}
 		>
@@ -126,11 +126,11 @@ export function ToggleSlider({ checked, onToggle }: ToggleSliderProps) {
 					height: `${dimensions.handleHeight}px`,
 					borderRadius: `${dimensions.handleBorderRadius}px`,
 					background: position > 0.5
-						? "rgba(255, 255, 255, 0.9)"
-						: "rgba(255, 255, 255, 0.6)",
-					boxShadow: "0 2px 8px rgba(0, 0, 0, 0.3)",
+						? colors.handleActive
+						: colors.handleInactive,
+					boxShadow: shadows.handle,
 					cursor: isDragging ? "grabbing" : "grab",
-					transition: isDragging ? "none" : "left 0.3s ease, background 0.3s ease",
+					transition: isDragging ? "none" : transitions.slider,
 				}}
 			/>
 		</div>
