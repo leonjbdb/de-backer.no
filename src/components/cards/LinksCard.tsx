@@ -1,6 +1,7 @@
 "use client";
 
 import { GlassButton } from "@/components/glass";
+import { CardTemplate } from "./CardTemplate";
 
 const links = [
 	{ label: "University of Oslo", href: "https://people.uio.no/leon", icon: "uio" },
@@ -59,23 +60,13 @@ function getIcon(iconType: string) {
  */
 export function LinksCard() {
 	return (
-		<>
-			<h2 style={{
-				margin: '0 0 8px 0',
-				fontSize: '24px',
-				fontWeight: '600',
-				color: 'var(--color-white, #ffffff)',
-				textAlign: 'center',
-				textShadow: '0 2px 10px rgba(0, 0, 0, 0.5)'
-			}}>
-				Links
-			</h2>
-
+		<CardTemplate title="Links" contentGap={8}>
 			<div style={{
 				display: 'flex',
 				flexDirection: 'column',
 				gap: '8px',
-				transformStyle: 'preserve-3d'
+				transformStyle: 'preserve-3d',
+				width: '100%'
 			}}>
 				{links.map(link => (
 					<GlassButton
@@ -88,6 +79,6 @@ export function LinksCard() {
 					/>
 				))}
 			</div>
-		</>
+		</CardTemplate>
 	);
 }

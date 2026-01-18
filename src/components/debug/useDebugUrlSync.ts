@@ -13,12 +13,18 @@ const CARD_TO_SECTION: Record<string, number> = {
 	contact: 2,
 };
 
+// Debug mode storage key
+const DEBUG_MODE_KEY = "debug-mode-enabled";
+
 /**
- * Hook to sync debug mode with URL.
+ * Hook to sync debug mode with URL bidirectionally.
  * 
  * When debug mode is enabled:
  * - URL updates to /debug/[card] when card changes
  * - URL updates to /debug when cards are hidden
+ * 
+ * When navigating to a /debug URL:
+ * - Debug mode is automatically enabled
  * 
  * This hook should be called from a component that has access to:
  * - activeSection (current card index)
@@ -31,6 +37,26 @@ export function useDebugUrlSync(
 	const debug = useDebugSafe();
 	const lastUpdateRef = useRef<string>("");
 
+	// Enable debug mode when navigating to /debug URL
+	useEffect(() => {
+		if (typeof window === "undefined") return;
+
+		const currentPath = window.location.pathname;
+		const isDebugRoute = currentPath.startsWith("/debug");
+
+		if (isDebugRoute && debug && !debug.state.enabled) {
+			// User navigated to debug URL - enable debug mode
+			debug.setEnabled(true);
+			localStorage.setItem(DEBUG_MODE_KEY, "true");
+
+			// Dispatch event to notify other components
+			window.dispatchEvent(
+				new CustomEvent("debugModeChanged", { detail: { enabled: true } })
+			);
+		}
+	}, [debug]);
+
+	// Sync URL when debug state changes
 	useEffect(() => {
 		if (typeof window === "undefined") return;
 
@@ -90,4 +116,12 @@ export function getInitialSectionFromDebugUrl(): number | undefined {
 	}
 
 	return undefined;
+}
+
+/**
+ * Check if the current URL is a debug route.
+ */
+export function isDebugUrl(): boolean {
+	if (typeof window === "undefined") return false;
+	return window.location.pathname.startsWith("/debug");
 }

@@ -3,6 +3,7 @@
 import Image from "next/image";
 import { useState, useRef, useCallback } from "react";
 import { siteConfig } from "@/config/site.config";
+import { CardTemplate } from "./CardTemplate";
 
 /**
  * ProfileCard - Pure content component
@@ -32,22 +33,6 @@ export function ProfileCard() {
 		<>
 			<style suppressHydrationWarning dangerouslySetInnerHTML={{
 				__html: `
-                .profile-content {
-                    display: flex;
-                    flex-direction: column;
-                    align-items: center;
-                    gap: 20px;
-                    text-align: center;
-                    transform-style: preserve-3d;
-                }
-                .about-header {
-                    margin: 0;
-                    font-size: 24px;
-                    font-weight: 600;
-                    color: var(--color-white, #ffffff);
-                    text-shadow: 0 2px 10px rgba(0, 0, 0, 0.5);
-                    text-align: center;
-                }
                 /* Stable hover zone - doesn't change size when inner content scales */
                 .profile-photo-hover-zone {
                     padding: 10px;
@@ -113,11 +98,7 @@ export function ProfileCard() {
                 }
             `}} />
 
-			<div className="profile-content">
-				<h2 className="about-header">
-					About
-				</h2>
-
+			<CardTemplate title="About">
 				{/* Hover zone wrapper - stable bounds that don't change with scale */}
 				<div
 					className="profile-photo-hover-zone"
@@ -158,7 +139,7 @@ export function ProfileCard() {
 						{siteConfig.identity.organization}
 					</p>
 				</div>
-			</div>
+			</CardTemplate>
 		</>
 	);
 }

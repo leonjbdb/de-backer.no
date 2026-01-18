@@ -3,45 +3,45 @@
 import { ReactNode, useState, useRef, useCallback, useEffect } from "react";
 
 interface GlassButtonProps {
-    icon: ReactNode;
-    label: string;
-    href: string;
-    target?: string;
-    rel?: string;
+	icon: ReactNode;
+	label: string;
+	href: string;
+	target?: string;
+	rel?: string;
 }
 
 export function GlassButton({ icon, label, href, target, rel }: GlassButtonProps) {
-    const [isHovered, setIsHovered] = useState(false);
-    const timeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
-    const supportsHover = typeof window !== 'undefined' && window.matchMedia('(hover: hover)').matches;
+	const [isHovered, setIsHovered] = useState(false);
+	const timeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+	const supportsHover = typeof window !== 'undefined' && window.matchMedia('(hover: hover)').matches;
 
-    const handleMouseEnter = useCallback(() => {
-        if (timeoutRef.current) {
-            clearTimeout(timeoutRef.current);
-            timeoutRef.current = null;
-        }
-        setIsHovered(true);
-    }, []);
+	const handleMouseEnter = useCallback(() => {
+		if (timeoutRef.current) {
+			clearTimeout(timeoutRef.current);
+			timeoutRef.current = null;
+		}
+		setIsHovered(true);
+	}, []);
 
-    const handleMouseLeave = useCallback(() => {
-        // Small delay before removing hover to prevent flickering at edges
-        timeoutRef.current = setTimeout(() => {
-            setIsHovered(false);
-        }, 100);
-    }, []);
+	const handleMouseLeave = useCallback(() => {
+		// Small delay before removing hover to prevent flickering at edges
+		timeoutRef.current = setTimeout(() => {
+			setIsHovered(false);
+		}, 100);
+	}, []);
 
-    useEffect(() => {
-        return () => {
-            if (timeoutRef.current) {
-                clearTimeout(timeoutRef.current);
-            }
-        };
-    }, []);
+	useEffect(() => {
+		return () => {
+			if (timeoutRef.current) {
+				clearTimeout(timeoutRef.current);
+			}
+		};
+	}, []);
 
-    return (
-        <>
-            <style suppressHydrationWarning dangerouslySetInnerHTML={{
-                __html: `
+	return (
+		<>
+			<style suppressHydrationWarning dangerouslySetInnerHTML={{
+				__html: `
                     .glass-button-link {
                         outline: none;
                         -webkit-tap-highlight-color: transparent;
@@ -133,35 +133,38 @@ export function GlassButton({ icon, label, href, target, rel }: GlassButtonProps
                         }
                         .glass-button-label {
                             font-size: 13px;
+                            white-space: normal;
+                            word-break: break-all;
+                            overflow-wrap: anywhere;
                         }
                         .glass-button-link {
                             min-height: 60px;
                         }
                     }
                 `
-            }} />
-            <a 
-                href={href}
-                target={target}
-                rel={rel}
-                className={`glass-button-link${supportsHover && isHovered ? ' is-hovered' : ''}`}
-                onMouseEnter={supportsHover ? handleMouseEnter : undefined}
-                onMouseLeave={supportsHover ? handleMouseLeave : undefined}
-            >
-                <div className="glass-button-content">
-                    <span className="glass-button-icon">
-                        {icon}
-                    </span>
-                    <span className="glass-button-label">
-                        {label}
-                    </span>
-                    <span className="glass-button-arrow">
-                        <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                            <path d="M5 12h14M12 5l7 7-7 7"/>
-                        </svg>
-                    </span>
-                </div>
-            </a>
-        </>
-    );
+			}} />
+			<a
+				href={href}
+				target={target}
+				rel={rel}
+				className={`glass-button-link${supportsHover && isHovered ? ' is-hovered' : ''}`}
+				onMouseEnter={supportsHover ? handleMouseEnter : undefined}
+				onMouseLeave={supportsHover ? handleMouseLeave : undefined}
+			>
+				<div className="glass-button-content">
+					<span className="glass-button-icon">
+						{icon}
+					</span>
+					<span className="glass-button-label">
+						{label}
+					</span>
+					<span className="glass-button-arrow">
+						<svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+							<path d="M5 12h14M12 5l7 7-7 7" />
+						</svg>
+					</span>
+				</div>
+			</a>
+		</>
+	);
 }

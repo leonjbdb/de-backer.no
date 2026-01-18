@@ -47,8 +47,14 @@ export class GridConfigFactory {
 
 		// Apply extension multiplier for off-screen grid area
 		const multiplier = config.extensionMultiplier;
-		const cellsX = cellsXPerViewport * (1 + 2 * multiplier);
-		const cellsY = cellsYPerViewport * (1 + 2 * multiplier);
+		let cellsX = cellsXPerViewport * (1 + 2 * multiplier);
+		let cellsY = cellsYPerViewport * (1 + 2 * multiplier);
+
+		// Cap grid size to prevent excessive memory usage on large screens
+		const maxCellsX = 315;
+		const maxCellsY = 175;
+		cellsX = Math.min(cellsX, maxCellsX);
+		cellsY = Math.min(cellsY, maxCellsY);
 
 		// Calculate world-space grid bounds
 		const minXCm = -screenWidthCm * multiplier;
