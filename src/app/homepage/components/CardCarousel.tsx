@@ -4,6 +4,7 @@ import { useEffect, useState } from "react";
 import { ProfileCard, LinksCard, ContactCard } from "@/components/cards";
 import { GlassCard } from "@/components/glass";
 import { useDebugSafe } from "@/components/debug";
+import { cardsConfig } from "@/config/cards.config";
 import type { AllSectionVisibility, SectionVisibility } from "../types";
 
 interface CardCarouselProps {
@@ -125,8 +126,6 @@ export function CardCarousel({ visibility, isReady, activeSection }: CardCarouse
 		willChange: 'opacity',
 	};
 
-	const sectionNames = ["About", "Links", "Contact"];
-
 	return (
 		<div
 			style={wrapperStyle}
@@ -146,7 +145,7 @@ export function CardCarousel({ visibility, isReady, activeSection }: CardCarouse
 				whiteSpace: 'nowrap',
 				borderWidth: '0'
 			}}>
-				{`Now showing: ${sectionNames[activeSection]} section`}
+				{`Now showing: ${cardsConfig[activeSection]?.label || 'Section'} section`}
 			</div>
 
 			{/* Profile card with scroll-based fade in/out */}

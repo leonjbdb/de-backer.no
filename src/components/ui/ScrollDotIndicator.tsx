@@ -1,11 +1,14 @@
 "use client";
 
+import { useRef, useCallback } from "react";
+
 interface ScrollDotIndicatorProps {
 	totalSections: number;
 	activeSection: number;
 	onDotClick: (index: number) => void;
 	visible: boolean;
 	theme: "light" | "dark";
+	sectionLabels: string[];
 }
 
 export function ScrollDotIndicator({
@@ -14,7 +17,36 @@ export function ScrollDotIndicator({
 	onDotClick,
 	visible,
 	theme,
+	sectionLabels,
 }: ScrollDotIndicatorProps) {
+	// Refs for each dot button
+	const dotRefs = useRef<(HTMLButtonElement | null)[]>([]);
+
+	// Handle arrow key navigation within the dot indicator
+	const handleKeyDown = useCallback((e: React.KeyboardEvent<HTMLButtonElement>, currentIndex: number) => {
+		let targetIndex: number | null = null;
+
+		if (e.key === "ArrowDown" || e.key === "ArrowRight") {
+			e.preventDefault();
+			targetIndex = Math.min(totalSections - 1, currentIndex + 1);
+		} else if (e.key === "ArrowUp" || e.key === "ArrowLeft") {
+			e.preventDefault();
+			targetIndex = Math.max(0, currentIndex - 1);
+		} else if (e.key === "Home") {
+			e.preventDefault();
+			targetIndex = 0;
+		} else if (e.key === "End") {
+			e.preventDefault();
+			targetIndex = totalSections - 1;
+		}
+
+		if (targetIndex !== null && targetIndex !== currentIndex) {
+			// Navigate to the section and move focus
+			onDotClick(targetIndex);
+			dotRefs.current[targetIndex]?.focus();
+		}
+	}, [totalSections, onDotClick]);
+
 	// Don't render at all until visible to prevent flash
 	if (!visible) {
 		return null;
@@ -97,7 +129,7 @@ export function ScrollDotIndicator({
                     outline: 3px solid #000000;
                 }
 
-                .dot:active {
+				.dot:active {
                     background-color: var(--color-maroon, #4E0506) !important;
                 }
 
@@ -117,6 +149,54 @@ export function ScrollDotIndicator({
                 .dot.passed {
                     background-color: ${passedColor};
                     box-shadow: none;
+                }
+
+                .dot-wrapper {
+                    position: relative;
+                    display: flex;
+                    align-items: center;
+                    justify-content: center;
+                }
+
+                .dot-label {
+                    position: absolute;
+                    white-space: nowrap;
+                    padding: 6px 12px;
+                    border-radius: 8px;
+                    font-size: 14px;
+                    font-weight: 500;
+                    pointer-events: none;
+                    opacity: 0;
+                    transition: opacity 0.2s ease;
+                    z-index: 100;
+                    background: ${theme === "dark" ? "rgba(0, 0, 0, 0.9)" : "rgba(255, 255, 255, 0.95)"};
+                    color: ${theme === "dark" ? "#ffffff" : "#000000"};
+                    border: 1px solid ${theme === "dark" ? "rgba(255, 255, 255, 0.2)" : "rgba(0, 0, 0, 0.1)"};
+                    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3);
+                    backdrop-filter: blur(10px);
+                }
+
+                .dot:hover + .dot-label,
+                .dot:focus-visible + .dot-label {
+                    opacity: 1;
+                }
+
+                /* Desktop: label appears to the right */
+                @media (min-width: 768px) {
+                    .dot-label {
+                        left: calc(100% + 12px);
+                        top: 50%;
+                        transform: translateY(-50%);
+                    }
+                }
+
+                /* Mobile: label appears above */
+                @media (max-width: 767px) {
+                    .dot-label {
+                        bottom: calc(100% + 12px);
+                        left: 50%;
+                        transform: translateX(-50%);
+                    }
                 }
             `}</style>
 
@@ -141,15 +221,26 @@ export function ScrollDotIndicator({
 						dotClass += " inactive";
 					}
 
+					const label = sectionLabels[index] || `Section ${index + 1}`;
+
 					return (
-						<button
-							key={index}
-							className={dotClass}
-							onClick={() => onDotClick(index)}
-							aria-label={`Go to section ${index + 1}`}
-							aria-current={isActive ? "true" : undefined}
-							type="button"
-						/>
+						<div key={index} className="dot-wrapper">
+							<button
+								ref={(el) => {
+									dotRefs.current[index] = el;
+								}}
+								className={dotClass}
+								onClick={() => onDotClick(index)}
+								onKeyDown={(e) => handleKeyDown(e, index)}
+								aria-label={`Go to ${label}`}
+								aria-current={isActive ? "true" : undefined}
+								tabIndex={isActive ? 0 : -1}
+								type="button"
+							/>
+							<span className="dot-label" aria-hidden="true">
+								{label}
+							</span>
+						</div>
 					);
 				})}
 			</nav>

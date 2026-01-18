@@ -6,6 +6,7 @@ import { ScrollDotIndicator } from "@/components/ui/ScrollDotIndicator";
 import { GridView } from "@/components/orb-field";
 import { GlassSlider } from "@/components/glass";
 import { useDeviceOrientation } from "@/hooks/useDeviceOrientation";
+import { cardsConfig } from "@/config/cards.config";
 import {
 	useAnimationStages,
 	useCardTransition,
@@ -123,6 +124,7 @@ export function HomePage({ initialSection }: HomePageProps) {
 					onDotClick={handleDotClick}
 					visible={skipAnimation ? gridAnimationComplete : isReady}
 					theme={theme}
+					sectionLabels={cardsConfig.map(card => card.label)}
 				/>
 			</main>
 
