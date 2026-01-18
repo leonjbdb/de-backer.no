@@ -4,9 +4,10 @@ import { useRef } from "react";
 import { useMobileViewport } from "@/hooks/device";
 import { useInteraction3D, useDragInteraction } from "../../hooks/interaction";
 import { useSpringAnimation } from "../../hooks/animation";
-import { useDelayedVisibility } from "../../hooks/visibility";
+import { useDelayedVisibility, computeSliderVisibility } from "../../hooks/visibility";
 import { useDebugMode } from "../../hooks/debug";
 import { DEFAULT_SLIDER_CONFIG } from "../../types";
+import { sliderPositionDefaults, visibilityDefaults, animationTimings } from "../../styles";
 import type { SliderConfig } from "../../types";
 import { SliderTrack } from "./SliderTrack";
 import { SliderHandle } from "./SliderHandle";
@@ -29,7 +30,7 @@ interface GlassSliderProps {
  */
 export function GlassSlider({ opacity = 1, onSlideComplete, config: configOverride }: GlassSliderProps) {
 	const trackRef = useRef<HTMLDivElement>(null);
-	const isMobile = useMobileViewport(768);
+	const isMobile = useMobileViewport(sliderPositionDefaults.mobileBreakpoint);
 
 	// Merge configuration with defaults
 	const config = { ...DEFAULT_SLIDER_CONFIG, ...configOverride };
@@ -71,16 +72,18 @@ export function GlassSlider({ opacity = 1, onSlideComplete, config: configOverri
 	const skipDelay = isDebugMode || wasActiveThisSession;
 	const { finalOpacity, hasAppeared } = useDelayedVisibility({
 		opacity,
-		initialDelayMs: 10000,
+		initialDelayMs: visibilityDefaults.initialDelay,
 		skipDelay,
 	});
 
-	// Keep slider visible if debug mode is/was active
-	const keepVisible = isDebugMode || wasActiveThisSession;
-	const computedOpacity = keepVisible ? 1 : finalOpacity;
-	const computedVisibility = keepVisible
-		? "visible"
-		: ((hasAppeared && opacity > 0.01) || opacity > 0.5 ? "visible" : "hidden");
+	// Compute visibility state using utility
+	const { keepVisible, computedOpacity, computedVisibility } = computeSliderVisibility({
+		isDebugMode,
+		wasActiveThisSession,
+		opacity,
+		hasAppeared,
+		finalOpacity,
+	});
 
 	return (
 		<div
@@ -89,14 +92,14 @@ export function GlassSlider({ opacity = 1, onSlideComplete, config: configOverri
 			onTouchEnd={(e) => e.stopPropagation()}
 			style={{
 				position: "fixed",
-				bottom: isMobile ? 32 : 48,
+				bottom: isMobile ? sliderPositionDefaults.bottomMobile : sliderPositionDefaults.bottomDesktop,
 				left: "50%",
 				transform: "translateX(-50%)",
 				opacity: computedOpacity,
 				visibility: computedVisibility,
-				transition: keepVisible ? "none" : "opacity 0.3s ease, visibility 0.3s",
+				transition: keepVisible ? "none" : `opacity ${animationTimings.duration.normal} ease, visibility ${animationTimings.duration.normal}`,
 				willChange: "opacity",
-				zIndex: 9999,
+				zIndex: sliderPositionDefaults.zIndex,
 			}}
 		>
 			<SliderTrack

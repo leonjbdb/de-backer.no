@@ -9,3 +9,6 @@ export type {
 	UseOpacityVisibilityOptions,
 	UseOpacityVisibilityResult,
 } from './useOpacityVisibility';
+
+export { computeSliderVisibility } from './visibilityUtils';
+export type { SliderVisibilityOptions, SliderVisibilityResult } from './visibilityUtils';

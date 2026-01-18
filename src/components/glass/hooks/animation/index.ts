@@ -15,5 +15,5 @@ export type { UseTiltAnimationOptions, UseTiltAnimationResult, TiltTarget } from
 export { easings } from './easings';
 export type { EasingFunction } from './easings';
 
-export { buildEntryExitTransform } from './transformBuilder';
-export type { AnimationTransform, TransformBuilderOptions } from './transformBuilder';
+export { buildEntryExitTransform, buildWheelTransform, buildMobilePaddingValue, buildGlassCardCssVars } from './transformBuilder';
+export type { AnimationTransform, TransformBuilderOptions, WheelTransformOptions, CssVarOptions } from './transformBuilder';

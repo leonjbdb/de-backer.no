@@ -90,3 +90,19 @@ export function combineGlassStyles(...styles: CSSProperties[]): CSSProperties {
 export const topEdgeHighlight = {
 	background: 'linear-gradient(90deg, transparent 0%, rgba(255, 255, 255, 0.5) 20%, rgba(255, 255, 255, 0.6) 50%, rgba(255, 255, 255, 0.5) 80%, transparent 100%)',
 } as const;
+
+/**
+ * Handle and arrow color constants
+ */
+export const handleColors = {
+	arrowDefault: 'var(--color-white, #ffffff)',
+	arrowActive: 'var(--color-maroon, #4E0506)',
+} as const;
+
+/**
+ * Highlight configuration for glass elements
+ */
+export const highlightDefaults = {
+	borderRadius: 14,
+	insetPercent: 8,
+} as const;

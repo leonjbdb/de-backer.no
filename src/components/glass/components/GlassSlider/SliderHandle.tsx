@@ -1,7 +1,7 @@
 "use client";
 
 import { CSSProperties } from "react";
-import { glassStyles, combineGlassStyles } from "../../styles";
+import { glassStyles, combineGlassStyles, handleColors, animationTimings } from "../../styles";
 import { SliderConfig } from "../../types";
 
 interface SliderHandleProps {
@@ -50,15 +50,14 @@ export function SliderHandle({
 		...combineGlassStyles(
 			isHovering || isDragging ? glassStyles.background.hover : glassStyles.background.subtle,
 			isHovering || isDragging ? glassStyles.border.hover : glassStyles.border.subtle,
-			isDragging ? glassStyles.shadow.handleDragging : glassStyles.shadow.handle
+			isDragging ? glassStyles.shadow.handleDragging : glassStyles.shadow.handle,
+			glassStyles.backdrop.blurLight
 		),
-		backdropFilter: "blur(12px)",
-		WebkitBackdropFilter: "blur(12px)",
 		cursor: isDragging ? "grabbing" : "grab",
 		display: "flex",
 		alignItems: "center",
 		justifyContent: "center",
-		transition: "transform 0.2s cubic-bezier(0.25, 0.46, 0.45, 0.94), background 0.25s ease, border-color 0.25s ease, box-shadow 0.25s ease",
+		transition: `transform ${animationTimings.duration.fast} ${animationTimings.easing.smooth}, background ${animationTimings.duration.normal} ease, border-color ${animationTimings.duration.normal} ease, box-shadow ${animationTimings.duration.normal} ease`,
 		willChange: "left, transform",
 		transformStyle: "preserve-3d",
 	};
@@ -79,7 +78,7 @@ export function SliderHandle({
 				height="20"
 				viewBox="0 0 24 24"
 				fill="none"
-				stroke={isHovering || isDragging ? "var(--color-maroon, #4E0506)" : "var(--color-white, #ffffff)"}
+				stroke={isHovering || isDragging ? handleColors.arrowActive : handleColors.arrowDefault}
 				strokeWidth="2.5"
 				strokeLinecap="round"
 				strokeLinejoin="round"
@@ -87,7 +86,7 @@ export function SliderHandle({
 					transform: `rotate(${arrowRotation}deg)`,
 					transition: isDragging
 						? "none"
-						: "transform 0.3s cubic-bezier(0.4, 0, 0.2, 1), stroke 0.25s ease",
+						: `transform ${animationTimings.duration.normal} ${animationTimings.easing.easeOut}, stroke ${animationTimings.duration.normal} ease`,
 				}}
 			>
 				<path d="M9 18l6-6-6-6" />

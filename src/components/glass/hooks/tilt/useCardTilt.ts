@@ -4,7 +4,7 @@ import { RefObject, useState, useEffect } from "react";
 import { useMouseProximity } from "../interaction/useMouseProximity";
 import { useTiltAnimation } from "../animation/useTiltAnimation";
 import { calculateOrientationTilt } from "./orientationTilt";
-import { animationTimings } from "../../styles";
+import { animationTimings, tiltDefaults } from "../../styles";
 
 export interface UseCardTiltOptions {
 	/** Reference to the card element */
@@ -61,7 +61,7 @@ export function useCardTilt(options: UseCardTiltOptions): UseCardTiltResult {
 	let mobileTiltTransform: string | null = null;
 
 	if (isTouchDevice && hasOrientationData) {
-		mobileTiltTransform = calculateOrientationTilt(tiltX, tiltY, 18);
+		mobileTiltTransform = calculateOrientationTilt(tiltX, tiltY, tiltDefaults.mobileTiltMaxAngle);
 	}
 
 	// Desktop: Mouse-based tilt on hover

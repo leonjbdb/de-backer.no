@@ -21,11 +21,16 @@ export {
 	glassStyles,
 	combineGlassStyles,
 	topEdgeHighlight,
+	handleColors,
+	highlightDefaults,
 	animationTimings,
 	interactionDefaults,
 	visibilityDefaults,
 	borderRadiusDefaults,
 	paddingDefaults,
+	sliderPositionDefaults,
+	cardDefaults,
+	tiltDefaults,
 } from './styles';
 
 // Hooks - Animation
@@ -72,12 +77,15 @@ export type {
 export {
 	useDelayedVisibility,
 	useOpacityVisibility,
+	computeSliderVisibility,
 } from './hooks/visibility';
 export type {
 	UseDelayedVisibilityOptions,
 	UseDelayedVisibilityResult,
 	UseOpacityVisibilityOptions,
 	UseOpacityVisibilityResult,
+	SliderVisibilityOptions,
+	SliderVisibilityResult,
 } from './hooks/visibility';
 
 // Hooks - Tilt

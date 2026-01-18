@@ -1,7 +1,7 @@
 "use client";
 
 import { ForwardedRef, forwardRef, CSSProperties } from "react";
-import { glassStyles, combineGlassStyles, topEdgeHighlight } from "../../styles";
+import { glassStyles, combineGlassStyles, topEdgeHighlight, highlightDefaults, cardDefaults } from "../../styles";
 import { SliderConfig } from "../../types";
 
 interface SliderTrackProps {
@@ -24,35 +24,35 @@ export const SliderTrack = forwardRef<HTMLDivElement, SliderTrackProps>(
 	) {
 		const borderRadius = config.trackHeight / 2;
 
-		const trackStyle: CSSProperties = {
-			position: "relative",
-			width: `${config.trackWidth}px`,
-			height: `${config.trackHeight}px`,
-			borderRadius: `${borderRadius}px`,
-			...combineGlassStyles(
-				glassStyles.background.default,
-				glassStyles.backdrop.blur,
-				glassStyles.border.default,
-				glassStyles.shadow.card
-			),
-			cursor: isDragging ? "grabbing" : "default",
-			userSelect: "none",
-			WebkitUserSelect: "none",
-			touchAction: "none",
-			perspective: "1200px",
-			transformStyle: "preserve-3d",
-		};
+	const trackStyle: CSSProperties = {
+		position: "relative",
+		width: `${config.trackWidth}px`,
+		height: `${config.trackHeight}px`,
+		borderRadius: `${borderRadius}px`,
+		...combineGlassStyles(
+			glassStyles.background.default,
+			glassStyles.backdrop.blur,
+			glassStyles.border.default,
+			glassStyles.shadow.card
+		),
+		cursor: isDragging ? "grabbing" : "default",
+		userSelect: "none",
+		WebkitUserSelect: "none",
+		touchAction: "none",
+		perspective: cardDefaults.perspective,
+		transformStyle: "preserve-3d",
+	};
 
-		const highlightStyle: CSSProperties = {
-			position: "absolute",
-			top: 0,
-			left: "8%",
-			right: "8%",
-			height: 1,
-			...topEdgeHighlight,
-			borderRadius: 14,
-			pointerEvents: "none",
-		};
+	const highlightStyle: CSSProperties = {
+		position: "absolute",
+		top: 0,
+		left: `${highlightDefaults.insetPercent}%`,
+		right: `${highlightDefaults.insetPercent}%`,
+		height: 1,
+		...topEdgeHighlight,
+		borderRadius: highlightDefaults.borderRadius,
+		pointerEvents: "none",
+	};
 
 		return (
 			<div

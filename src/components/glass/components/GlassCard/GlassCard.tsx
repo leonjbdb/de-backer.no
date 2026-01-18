@@ -3,9 +3,9 @@
 import { useRef, useId } from "react";
 import { useDeviceOrientation, useTouchDevice } from "@/hooks";
 import { useCardTilt } from "../../hooks/tilt";
-import { useEntryExitAnimation, buildEntryExitTransform } from "../../hooks/animation";
+import { useEntryExitAnimation, buildEntryExitTransform, buildWheelTransform, buildMobilePaddingValue, buildGlassCardCssVars } from "../../hooks/animation";
 import { useOpacityVisibility } from "../../hooks/visibility";
-import { borderRadiusDefaults, paddingDefaults } from "../../styles";
+import { borderRadiusDefaults, paddingDefaults, cardDefaults } from "../../styles";
 import type { GlassCardProps } from "../../types";
 import { GlassCardBackground } from "./GlassCardBackground";
 import { GlassCardContent } from "./GlassCardContent";
@@ -66,13 +66,9 @@ export function GlassCard({
 
 	// Padding values
 	const paddingValue = typeof padding === "number" ? `${padding}px` : padding;
-	const mobilePaddingValue = mobilePadding
-		? (typeof mobilePadding === "number" ? `${mobilePadding}px` : mobilePadding)
-		: typeof paddingDefaults.cardMobile === "number"
-			? `${paddingDefaults.cardMobile}px`
-			: paddingDefaults.cardMobile;
+	const mobilePaddingValue = buildMobilePaddingValue(mobilePadding, padding, paddingDefaults.cardMobile);
 
-	// eslint-disable-next-line @typescript-eslint/no-unused-vars
+	// Destructure style to exclude transform (handled by animation)
 	const { transform: _, ...styleWithoutTransform } = style || {};
 
 	// Check if we have 3D wheel transforms (mobile mode)
@@ -83,14 +79,16 @@ export function GlassCard({
 
 	if (hasWheelTransform) {
 		// Mobile 3D wheel carousel transform
-		combinedTransform = `
-			translate3d(calc(-50% + ${wheelTranslateX}px), calc(-50% - 40px), ${wheelTranslateZ}px)
-			rotateY(${wheelRotateY}deg)
-			scale3d(${mobileScale}, ${mobileScale}, 1)
-		`.replace(/\s+/g, ' ').trim();
+		combinedTransform = buildWheelTransform({
+			translateX: wheelTranslateX,
+			translateY: -cardDefaults.mobileVerticalShift,
+			translateZ: wheelTranslateZ,
+			rotateY: wheelRotateY,
+			scale: mobileScale,
+		});
 	} else {
 		// Desktop or legacy mobile: vertical scroll animations
-		const verticalShift = isTouchDevice ? "- 40px" : "";
+		const verticalShift = isTouchDevice ? `- ${cardDefaults.mobileVerticalShift}px` : "";
 		combinedTransform = buildEntryExitTransform(animation, {
 			horizontalOffset: mobileOffset,
 			verticalShift,
@@ -102,10 +100,13 @@ export function GlassCard({
 	const hasMobileOverrides = mobileBorderRadius !== undefined || mobilePadding !== undefined;
 
 	// Build CSS custom properties for mobile overrides
-	const cssVars = hasMobileOverrides ? {
-		'--glass-card-mobile-radius': `${mobileBorderRadius ?? borderRadius}px`,
-		'--glass-card-mobile-padding': mobilePaddingValue,
-	} as React.CSSProperties : {};
+	const cssVars = hasMobileOverrides
+		? buildGlassCardCssVars({
+			mobileBorderRadius,
+			borderRadius,
+			mobilePadding: mobilePaddingValue,
+		})
+		: {};
 
 	return (
 		<div
@@ -118,7 +119,7 @@ export function GlassCard({
 			inert={!isVisible ? true : undefined}
 			style={{
 				position: "relative",
-				perspective: "1200px",
+				perspective: cardDefaults.perspective,
 				transformStyle: "preserve-3d",
 				willChange: "transform, opacity",
 				backfaceVisibility: "hidden",

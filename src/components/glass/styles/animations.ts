@@ -54,3 +54,30 @@ export const paddingDefaults = {
 	button: '10px 24px 10px 12px',
 	cardGap: 20,
 } as const;
+
+/**
+ * Slider positioning defaults
+ */
+export const sliderPositionDefaults = {
+	bottomDesktop: 48,
+	bottomMobile: 32,
+	zIndex: 9999,
+	mobileBreakpoint: 768,
+} as const;
+
+/**
+ * Card 3D and layout defaults
+ */
+export const cardDefaults = {
+	perspective: '1200px',
+	mobileVerticalShift: 40,
+	contentZOffset: 10,
+} as const;
+
+/**
+ * Tilt animation defaults
+ */
+export const tiltDefaults = {
+	mobileTiltMaxAngle: 18,
+	desktopTiltMaxAngle: 8,
+} as const;

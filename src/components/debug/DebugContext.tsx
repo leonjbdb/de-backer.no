@@ -1,6 +1,7 @@
 "use client";
 
 import { createContext, useContext, useState, useCallback, useEffect, type ReactNode } from "react";
+import { debugStorage } from "@/lib/storage";
 
 /**
  * Debug state interface for all toggle options.
@@ -114,15 +115,9 @@ export function DebugProvider({
 	}));
 	const [activeCard, setActiveCard] = useState<string | null>(initialCard);
 
-	// Sync localStorage with enabled state
+	// Sync debug enabled state to storage abstraction
 	useEffect(() => {
-		if (typeof window !== "undefined") {
-			localStorage.setItem("debug-mode-enabled", state.enabled.toString());
-			// Dispatch event for OrbField to listen to
-			window.dispatchEvent(
-				new CustomEvent("debugModeChanged", { detail: { enabled: state.enabled } })
-			);
-		}
+		debugStorage.setEnabled(state.enabled);
 	}, [state.enabled]);
 
 	const toggle = useCallback((key: keyof Omit<DebugState, "enabled">) => {
