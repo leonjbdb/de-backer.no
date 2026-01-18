@@ -165,7 +165,8 @@ export function useDeviceOrientation(): DeviceOrientation {
 				touchListenersActive = true;
 			} else {
 				// Non-iOS: No permission needed, start listening immediately
-				queueMicrotask(() => {
+				// Use requestAnimationFrame for immediate but linter-compliant update
+				requestAnimationFrame(() => {
 					setHasPermission(true);
 				});
 				startListening();
