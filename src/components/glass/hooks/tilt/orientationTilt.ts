@@ -21,5 +21,5 @@ export function calculateOrientationTilt(
 	const rotateY = -(tiltX - 0.5) * 2 * maxTilt;  // left-right (inverted so card faces user)
 	const rotateX = (tiltY - 0.5) * 2 * maxTilt;   // front-back (positive so card faces user)
 
-	return `rotateX(${rotateX}deg) rotateY(${rotateY}deg) scale3d(1, 1, 1)`;
+	return `perspective(1200px) rotateX(${rotateX}deg) rotateY(${rotateY}deg) scale3d(1, 1, 1)`;
 }
