@@ -54,6 +54,8 @@ export interface AllSectionVisibility {
 export interface AnimationStagesState {
 	stage: number;
 	isReady: boolean;
+	wasSkippedFromStorage: boolean;
+	hasCheckedStorage: boolean;
 }
 
 export interface AnimationStagesOptions {

@@ -32,7 +32,7 @@ interface HomePageProps {
 export function HomePage({ initialSection }: HomePageProps) {
 	const { theme } = useTheme();
 
-	// Skip animation when starting from a specific section
+	// Skip animation when starting from a specific section (set before useAnimationStages)
 	const skipAnimation = initialSection !== undefined;
 
 	// Track when grid animation completes (for skipAnimation case)
@@ -45,16 +45,21 @@ export function HomePage({ initialSection }: HomePageProps) {
 	const { rawTiltX, rawTiltY } = useDeviceOrientation();
 
 	// Animation stage management (intro sequence)
-	const { stage, isReady } = useAnimationStages({ skipAnimation });
+	const { stage, isReady, wasSkippedFromStorage, hasCheckedStorage } = useAnimationStages({ skipAnimation });
 
 	// Unified card transition system - handles scroll, keyboard, dots, touch
+	// When animation was skipped from storage (cookie), skip the greeting and go to first card
 	const {
 		scrollProgress,
 		activeSection,
 		hasPassedGreeting,
 		isMobile,
 		handleDotClick,
-	} = useCardTransition({ enabled: isReady, initialSection });
+	} = useCardTransition({
+		enabled: isReady,
+		initialSection,
+		skipGreeting: wasSkippedFromStorage,
+	});
 
 	// Calculate all section visibilities (isJumping no longer used - animations are unified)
 	const visibility = useSectionVisibility({
@@ -103,7 +108,8 @@ export function HomePage({ initialSection }: HomePageProps) {
 				style={{ background: homepageBackground }}
 			>
 				{/* Greeting section ("Hi!" and "Welcome...") - only show if not skipping */}
-				{!skipAnimation && stage < 7 && (
+				{/* Wait for storage check to prevent flash when cookie is set */}
+				{!skipAnimation && hasCheckedStorage && !wasSkippedFromStorage && stage < 7 && (
 					<GreetingSection
 						stage={stage}
 						theme={theme}

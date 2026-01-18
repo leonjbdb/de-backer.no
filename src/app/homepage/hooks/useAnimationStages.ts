@@ -29,20 +29,40 @@ export function useAnimationStages(options?: AnimationStagesOptions): AnimationS
 		return options?.skipAnimation ?? false;
 	});
 
+	// Track if skip was triggered by storage (cookie/localStorage)
+	const [wasSkippedFromStorage, setWasSkippedFromStorage] = useState(false);
+
+	// Track if we've checked storage yet (to delay animation start)
+	const [hasCheckedStorage, setHasCheckedStorage] = useState(false);
+
 	const [stage, setStage] = useState(shouldSkip ? 7 : 0);
 
 	// Re-check storage on client mount (handles SSR mismatch)
+	// This must complete before animation timers start
 	useEffect(() => {
-		if (!options?.skipAnimation && introStorage.hasIntroBeenPlayed()) {
-			// Use microtask to avoid synchronous setState warning
-			queueMicrotask(() => {
+		// Use queueMicrotask to avoid synchronous setState warning
+		queueMicrotask(() => {
+			if (options?.skipAnimation) {
+				// Already skipping via prop, no need to check storage
+				setHasCheckedStorage(true);
+				return;
+			}
+
+			if (introStorage.hasIntroBeenPlayed()) {
 				setShouldSkip(true);
+				setWasSkippedFromStorage(true);
 				setStage(7);
-			});
-		}
+			}
+			setHasCheckedStorage(true);
+		});
 	}, [options?.skipAnimation]);
 
 	useEffect(() => {
+		// Wait for storage check to complete before starting animations
+		if (!hasCheckedStorage) {
+			return;
+		}
+
 		// Skip all animations if requested
 		if (shouldSkip) {
 			return;
@@ -69,10 +89,12 @@ export function useAnimationStages(options?: AnimationStagesOptions): AnimationS
 			clearTimeout(timer6);
 			clearTimeout(timer7);
 		};
-	}, [shouldSkip]);
+	}, [shouldSkip, hasCheckedStorage]);
 
 	return {
 		stage,
 		isReady: stage >= 7,
+		wasSkippedFromStorage,
+		hasCheckedStorage,
 	};
 }

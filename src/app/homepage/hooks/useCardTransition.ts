@@ -18,6 +18,8 @@ import { useTouchNavigation } from "./navigation/useTouchNavigation";
 export interface CardTransitionOptions {
 	enabled: boolean;
 	initialSection?: number;
+	/** When true, skip the greeting and go directly to first card (used when animation was previously played) */
+	skipGreeting?: boolean;
 }
 
 export interface CardTransitionState {
@@ -38,6 +40,7 @@ export interface CardTransitionState {
 export function useCardTransition({
 	enabled,
 	initialSection,
+	skipGreeting = false,
 }: CardTransitionOptions): CardTransitionState {
 	// Calculate initial values based on initialSection
 	const hasInitialSection = initialSection !== undefined && initialSection >= 0 && initialSection <= 2;
@@ -50,6 +53,9 @@ export function useCardTransition({
 	const [isMobile, setIsMobile] = useState(false);
 	const [transitionDirection, setTransitionDirection] = useState<"forward" | "backward" | null>(null);
 	const [mobileSection, setMobileSection] = useState(hasInitialSection ? initialSection : -1);
+
+	// Track if we've already handled the skipGreeting transition
+	const hasSkippedGreetingRef = useRef(false);
 
 	// Refs for animation and state tracking
 	const snapTimeoutRef = useRef<NodeJS.Timeout | undefined>(undefined);
@@ -68,6 +74,33 @@ export function useCardTransition({
 		window.addEventListener("resize", checkMobile);
 		return () => window.removeEventListener("resize", checkMobile);
 	}, []);
+
+	// Handle skipGreeting flag (when animation was previously played)
+	// This immediately jumps to the first card without any animation
+	// Uses queueMicrotask to avoid synchronous setState warning in effect
+	useEffect(() => {
+		if (skipGreeting && !hasSkippedGreetingRef.current && !hasPassedGreeting) {
+			hasSkippedGreetingRef.current = true;
+
+			// On desktop, also set the actual scroll position
+			if (!isMobile && typeof window !== 'undefined') {
+				const targetScroll = RESTING_POINTS[0] * window.innerHeight;
+				window.scrollTo({
+					top: targetScroll,
+					behavior: "instant" as ScrollBehavior,
+				});
+				hasInitializedRef.current = true;
+			}
+
+			queueMicrotask(() => {
+				// Immediately set state to first card position
+				setScrollProgress(RESTING_POINTS[0]);
+				setActiveSection(0);
+				setMobileSection(0);
+				setHasPassedGreeting(true);
+			});
+		}
+	}, [skipGreeting, hasPassedGreeting, isMobile]);
 
 	// Set initial scroll position when there's an initial section (desktop only)
 	useEffect(() => {
