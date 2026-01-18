@@ -45,7 +45,7 @@ export function useTiltAnimation(options: UseTiltAnimationOptions): UseTiltAnima
 		enabled = true,
 	} = options;
 
-	const [transform, setTransform] = useState("perspective(1200px) rotateX(0deg) rotateY(0deg) scale3d(1, 1, 1)");
+	const [transform, setTransform] = useState("rotateX(0deg) rotateY(0deg) scale3d(1, 1, 1)");
 
 	// Animation state refs
 	const currentRef = useRef<TiltTarget>({ rotateX: 0, rotateY: 0, scale: 1 });
@@ -58,7 +58,7 @@ export function useTiltAnimation(options: UseTiltAnimationOptions): UseTiltAnima
 	 */
 	const applyTransform = useCallback(() => {
 		const { rotateX, rotateY, scale } = currentRef.current;
-		setTransform(`perspective(1200px) rotateX(${rotateX}deg) rotateY(${rotateY}deg) scale3d(${scale}, ${scale}, ${scale})`);
+		setTransform(`rotateX(${rotateX}deg) rotateY(${rotateY}deg) scale3d(${scale}, ${scale}, ${scale})`);
 	}, []);
 
 	/**

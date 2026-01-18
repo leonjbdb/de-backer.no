@@ -119,6 +119,7 @@ export function GlassCard({
 			inert={!isVisible ? true : undefined}
 			style={{
 				position: "relative",
+				perspective: cardDefaults.perspective,
 				transformStyle: "preserve-3d",
 				willChange: "transform, opacity",
 				backfaceVisibility: "hidden",
