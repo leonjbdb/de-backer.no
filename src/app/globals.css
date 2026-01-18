@@ -651,3 +651,48 @@
 	  transition-duration: 0.01ms !important;
 	}
   }
+
+  /* --------------------------------------------------------------------------
+	 Mobile Landscape Overlay
+	 Shows a message asking users to rotate their device to portrait
+	 -------------------------------------------------------------------------- */
+  .landscape-overlay {
+	display: none;
+	position: fixed;
+	inset: 0;
+	z-index: 99999;
+	background: #000000;
+	flex-direction: column;
+	align-items: center;
+	justify-content: center;
+	gap: 24px;
+	color: #ffffff;
+	text-align: center;
+	padding: 32px;
+  }
+
+  .landscape-overlay svg {
+	width: 64px;
+	height: 64px;
+	animation: rotate-phone 2s ease-in-out infinite;
+  }
+
+  .landscape-overlay p {
+	font-size: 18px;
+	font-weight: 500;
+	margin: 0;
+	opacity: 0.9;
+  }
+
+  @keyframes rotate-phone {
+	0%, 100% { transform: rotate(0deg); }
+	25% { transform: rotate(-15deg); }
+	75% { transform: rotate(15deg); }
+  }
+
+  /* Show overlay only on mobile devices in landscape */
+  @media (max-width: 900px) and (orientation: landscape) and (max-height: 500px) {
+	.landscape-overlay {
+	  display: flex;
+	}
+  }
