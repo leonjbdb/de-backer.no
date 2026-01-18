@@ -1,6 +1,6 @@
 #:schema node_modules/wrangler/config-schema.json
 main = ".open-next/worker.js"
-name = "de-backer-no"
+name = "de-backer"
 compatibility_date = "2025-01-17"
 compatibility_flags = ["nodejs_compat"]
 
