@@ -100,17 +100,19 @@ export function GlassCard({
 
 		let currentRotateX = 0;
 		let currentRotateY = 0;
+		let currentScale = 1;
 		let targetRotateX = 0;
 		let targetRotateY = 0;
-		const smoothingFactor = 0.12;
+		let targetScale = 1;
+		const smoothingFactor = 0.08; // Slower smoothing for smoother entry
 		let rafId: number | null = null;
 		let animationRunning = false;
 
 		const applyTransform = () => {
-			setTransform(`rotateX(${currentRotateX}deg) rotateY(${currentRotateY}deg) scale3d(1.01, 1.01, 1.01)`);
+			setTransform(`rotateX(${currentRotateX}deg) rotateY(${currentRotateY}deg) scale3d(${currentScale}, ${currentScale}, ${currentScale})`);
 		};
 
-		const calculateTarget = (clientX: number, clientY: number) => {
+		const calculateTarget = (clientX: number, clientY: number, influence: number = 1) => {
 			const rect = card.getBoundingClientRect();
 			const centerX = rect.left + rect.width / 2;
 			const centerY = rect.top + rect.height / 2;
@@ -118,30 +120,36 @@ export function GlassCard({
 			const mouseX = clientX - centerX;
 			const mouseY = clientY - centerY;
 
-			const maxTilt = 3;
-			targetRotateX = (mouseY / (rect.height / 2)) * -maxTilt;
-			targetRotateY = (mouseX / (rect.width / 2)) * maxTilt;
+			const maxTilt = 8;
+			// Scale tilt by influence - further away = less tilt
+			targetRotateX = (mouseY / (rect.height / 2)) * -maxTilt * influence;
+			targetRotateY = (mouseX / (rect.width / 2)) * maxTilt * influence;
+			// Scale also responds to influence - slightly more pronounced
+			targetScale = 1 + (0.02 * influence);
 		};
 
 		// Continuous animation loop for smooth tilt
 		const animateTilt = () => {
-			if (!isHoveringRef.current) {
-				animationRunning = false;
-				return;
-			}
-
+			// Smoothly interpolate all values
 			currentRotateX += (targetRotateX - currentRotateX) * smoothingFactor;
 			currentRotateY += (targetRotateY - currentRotateY) * smoothingFactor;
+			currentScale += (targetScale - currentScale) * smoothingFactor;
 
 			applyTransform();
 
-			// Keep animating until we're very close to target
+			// Keep animating until we're very close to all targets
 			const deltaX = Math.abs(targetRotateX - currentRotateX);
 			const deltaY = Math.abs(targetRotateY - currentRotateY);
+			const deltaScale = Math.abs(targetScale - currentScale);
 
-			if (deltaX > 0.01 || deltaY > 0.01) {
+			if (deltaX > 0.001 || deltaY > 0.001 || deltaScale > 0.0001) {
 				rafId = requestAnimationFrame(animateTilt);
 			} else {
+				// Snap to final values
+				currentRotateX = targetRotateX;
+				currentRotateY = targetRotateY;
+				currentScale = targetScale;
+				applyTransform();
 				animationRunning = false;
 			}
 		};
@@ -154,11 +162,12 @@ export function GlassCard({
 		};
 
 		const resetTilt = () => {
+			// Set targets to resting state, animation will smoothly transition
 			targetRotateX = 0;
 			targetRotateY = 0;
-			currentRotateX = 0;
-			currentRotateY = 0;
-			setTransform("rotateX(0deg) rotateY(0deg) scale3d(1, 1, 1)");
+			targetScale = 1;
+			// Keep animation running to smoothly return to rest
+			startAnimation();
 		};
 
 		// Check if an element is inside this card using data attribute
@@ -173,62 +182,120 @@ export function GlassCard({
 			return false;
 		};
 
-		// Check if mouse is over this card (handles overlapping cards)
-		const isMouseOverThisCard = (clientX: number, clientY: number): boolean => {
+		// Proximity zone extends this many pixels beyond the card bounds
+		const proximityZone = 150;
+
+		// Check mouse proximity to card and return influence (0 = far away, 1 = directly over)
+		const getMouseInfluence = (clientX: number, clientY: number): { influence: number; isDirectlyOver: boolean } => {
 			// First check visibility - skip hidden cards
 			const computedStyle = window.getComputedStyle(card);
 			const cardOpacity = parseFloat(computedStyle.opacity);
 			if (cardOpacity < 0.1 || computedStyle.visibility === 'hidden') {
-				return false;
+				return { influence: 0, isDirectlyOver: false };
 			}
 
-			// Check bounds first (quick rejection)
 			const rect = card.getBoundingClientRect();
-			if (clientX < rect.left || clientX > rect.right ||
-				clientY < rect.top || clientY > rect.bottom) {
-				return false;
+
+			// Check if directly over the card
+			const isDirectlyOver = clientX >= rect.left && clientX <= rect.right &&
+				clientY >= rect.top && clientY <= rect.bottom;
+
+			if (isDirectlyOver) {
+				// Verify with element check for overlapping cards
+				const elementAtPoint = document.elementFromPoint(clientX, clientY);
+				if (elementAtPoint && isElementInsideCard(elementAtPoint)) {
+					return { influence: 1, isDirectlyOver: true };
+				}
+				// Fallback for edge cases
+				if (cardOpacity >= 0.5) {
+					return { influence: 1, isDirectlyOver: true };
+				}
 			}
 
-			// Check if an element at this point is inside this card
-			const elementAtPoint = document.elementFromPoint(clientX, clientY);
-			if (elementAtPoint && isElementInsideCard(elementAtPoint)) {
-				return true;
+			// Calculate distance to card edge
+			const distanceX = clientX < rect.left ? rect.left - clientX :
+				clientX > rect.right ? clientX - rect.right : 0;
+			const distanceY = clientY < rect.top ? rect.top - clientY :
+				clientY > rect.bottom ? clientY - rect.bottom : 0;
+			const distance = Math.sqrt(distanceX * distanceX + distanceY * distanceY);
+
+			// If within proximity zone, return scaled influence (1 at edge, 0 at zone boundary)
+			if (distance < proximityZone) {
+				const influence = 1 - (distance / proximityZone);
+				// Apply easing for more natural falloff
+				return { influence: influence * influence, isDirectlyOver: false };
 			}
 
-			// Fallback: if element check failed but bounds match, still consider it a hit
-			// This handles edge cases during animations or when pointer-events are disabled
-			return cardOpacity >= 0.5;
+			return { influence: 0, isDirectlyOver: false };
 		};
 
 		// Use document-level mousemove for reliable detection across all child elements
 		const handleDocumentMouseMove = (e: MouseEvent) => {
-			const isOver = isMouseOverThisCard(e.clientX, e.clientY);
+			const { influence, isDirectlyOver } = getMouseInfluence(e.clientX, e.clientY);
 
-			if (isOver && !isHoveringRef.current) {
-				// Mouse just entered
+			if (influence > 0) {
+				// Mouse is within proximity zone or directly over
+				if (isDirectlyOver && !isHoveringRef.current) {
+					isHoveringRef.current = true;
+					setIsHovering(true);
+				} else if (!isDirectlyOver && isHoveringRef.current) {
+					// Only stop "hovering" if we don't have focus
+					const hasFocus = card.contains(document.activeElement);
+					if (!hasFocus) {
+						isHoveringRef.current = false;
+						setIsHovering(false);
+					}
+				}
+				
+				// Calculate tilt based on mouse position, scaled by influence
+				calculateTarget(e.clientX, e.clientY, influence);
+				startAnimation();
+			} else if (isHoveringRef.current || targetScale !== 1 || targetRotateX !== 0 || targetRotateY !== 0) {
+				// Mouse left the proximity zone - check if we still have focus
+				const hasFocus = card.contains(document.activeElement);
+				if (!hasFocus) {
+					isHoveringRef.current = false;
+					setIsHovering(false);
+					resetTilt();
+				}
+			}
+		};
+
+		const handleFocusIn = (e: FocusEvent) => {
+			const target = e.target as HTMLElement;
+			if (isElementInsideCard(target)) {
 				isHoveringRef.current = true;
 				setIsHovering(true);
-				calculateTarget(e.clientX, e.clientY);
+				
+				// Calculate target based on the center of the focused element
+				const rect = target.getBoundingClientRect();
+				const centerX = rect.left + rect.width / 2;
+				const centerY = rect.top + rect.height / 2;
+				
+				calculateTarget(centerX, centerY, 1);
 				startAnimation();
-			} else if (isOver && isHoveringRef.current) {
-				// Mouse moving within card
-				calculateTarget(e.clientX, e.clientY);
-				startAnimation();
-			} else if (!isOver && isHoveringRef.current) {
-				// Mouse just left
+			}
+		};
+
+		const handleFocusOut = (e: FocusEvent) => {
+			const relatedTarget = e.relatedTarget as HTMLElement;
+			// If we're moving focus outside the card completely
+			if (!isElementInsideCard(relatedTarget)) {
 				isHoveringRef.current = false;
 				setIsHovering(false);
-				animationRunning = false;
-				if (rafId) cancelAnimationFrame(rafId);
 				resetTilt();
 			}
 		};
 
 		// Use document level for reliable event capture across all child elements
 		document.addEventListener("mousemove", handleDocumentMouseMove);
+		document.addEventListener("focusin", handleFocusIn);
+		document.addEventListener("focusout", handleFocusOut);
 
 		return () => {
 			document.removeEventListener("mousemove", handleDocumentMouseMove);
+			document.removeEventListener("focusin", handleFocusIn);
+			document.removeEventListener("focusout", handleFocusOut);
 			animationRunning = false;
 			if (rafId) cancelAnimationFrame(rafId);
 		};
@@ -362,8 +429,8 @@ export function GlassCard({
 					transition: isTouchDevice
 						? "transform 0.1s ease-out"  // Slightly longer for smooth device orientation
 						: isHovering
-							? "transform 0.05s ease-out"
-							: "transform 0.5s ease-out",
+							? "transform 0.15s cubic-bezier(0.25, 0.46, 0.45, 0.94)"
+							: "transform 0.5s cubic-bezier(0.25, 0.46, 0.45, 0.94)",
 					transformStyle: "preserve-3d",
 				}}
 			>
