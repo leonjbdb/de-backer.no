@@ -89,9 +89,11 @@ export function GridDebugPanel({
 			</div>
 
 			<div style={{ marginBottom: spacing.gapLg }}>
-				<label style={{ display: 'flex', alignItems: 'center', gap: spacing.gapLg }}>
+				<label htmlFor="debug-panel-layer-z" style={{ display: 'flex', alignItems: 'center', gap: spacing.gapLg }}>
 					<span style={{ color: colors.textSecondary }}>Z:</span>
 					<input
+						id="debug-panel-layer-z"
+						name="debug-panel-layer-z"
 						type="range"
 						min={0}
 						max={gridConfig.layers - 1}

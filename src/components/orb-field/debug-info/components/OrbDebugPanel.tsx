@@ -114,9 +114,11 @@ export function OrbDebugPanel({
 
 			{/* Orb Selector */}
 			<div style={{ display: 'flex', flexDirection: 'column', gap: spacing.gapSm }}>
-				<label style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+				<label htmlFor="debug-panel-orb-select" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
 					<span style={{ color: colors.textSecondary }}>Select:</span>
 					<select
+						id="debug-panel-orb-select"
+						name="debug-panel-orb-select"
 						value={selectedOrbId || ''}
 						onChange={(e) => {
 							onSelectOrb?.(e.target.value || null);
@@ -196,11 +198,13 @@ export function OrbDebugPanel({
 			{enableSpawnOnClick && (
 				<>
 					<div style={{ display: 'flex', flexDirection: 'column', gap: spacing.gapSm }}>
-						<label style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+						<label htmlFor="debug-panel-brush-size" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
 							<span style={{ color: colors.textSecondary }}>Brush Size:</span>
 							<span style={{ color: colors.textPrimary }}>{orbSize}</span>
 						</label>
 						<input
+							id="debug-panel-brush-size"
+							name="debug-panel-brush-size"
 							type="range"
 							min={minSize}
 							max={maxSize}

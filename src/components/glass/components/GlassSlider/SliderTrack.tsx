@@ -7,9 +7,6 @@ import { SliderConfig } from "../../types";
 interface SliderTrackProps {
 	config: SliderConfig;
 	isDragging?: boolean;
-	onTouchStart?: (e: React.TouchEvent) => void;
-	onTouchMove?: (e: React.TouchEvent) => void;
-	onTouchEnd?: (e: React.TouchEvent) => void;
 	children: React.ReactNode;
 }
 
@@ -19,47 +16,44 @@ interface SliderTrackProps {
  */
 export const SliderTrack = forwardRef<HTMLDivElement, SliderTrackProps>(
 	function SliderTrack(
-		{ config, isDragging, onTouchStart, onTouchMove, onTouchEnd, children },
+		{ config, isDragging, children },
 		ref: ForwardedRef<HTMLDivElement>
 	) {
 		const borderRadius = config.trackHeight / 2;
 
-	const trackStyle: CSSProperties = {
-		position: "relative",
-		width: `${config.trackWidth}px`,
-		height: `${config.trackHeight}px`,
-		borderRadius: `${borderRadius}px`,
-		...combineGlassStyles(
-			glassStyles.background.default,
-			glassStyles.backdrop.blur,
-			glassStyles.border.default,
-			glassStyles.shadow.card
-		),
-		cursor: isDragging ? "grabbing" : "default",
-		userSelect: "none",
-		WebkitUserSelect: "none",
-		touchAction: "none",
-		perspective: cardDefaults.perspective,
-		transformStyle: "preserve-3d",
-	};
+		const trackStyle: CSSProperties = {
+			position: "relative",
+			width: `${config.trackWidth}px`,
+			height: `${config.trackHeight}px`,
+			borderRadius: `${borderRadius}px`,
+			...combineGlassStyles(
+				glassStyles.background.default,
+				glassStyles.backdrop.blur,
+				glassStyles.border.default,
+				glassStyles.shadow.card
+			),
+			cursor: isDragging ? "grabbing" : "default",
+			userSelect: "none",
+			WebkitUserSelect: "none",
+			touchAction: "none",
+			perspective: cardDefaults.perspective,
+			transformStyle: "preserve-3d",
+		};
 
-	const highlightStyle: CSSProperties = {
-		position: "absolute",
-		top: 0,
-		left: `${highlightDefaults.insetPercent}%`,
-		right: `${highlightDefaults.insetPercent}%`,
-		height: 1,
-		...topEdgeHighlight,
-		borderRadius: highlightDefaults.borderRadius,
-		pointerEvents: "none",
-	};
+		const highlightStyle: CSSProperties = {
+			position: "absolute",
+			top: 0,
+			left: `${highlightDefaults.insetPercent}%`,
+			right: `${highlightDefaults.insetPercent}%`,
+			height: 1,
+			...topEdgeHighlight,
+			borderRadius: highlightDefaults.borderRadius,
+			pointerEvents: "none",
+		};
 
 		return (
 			<div
 				ref={ref}
-				onTouchStart={onTouchStart}
-				onTouchMove={onTouchMove}
-				onTouchEnd={onTouchEnd}
 				style={trackStyle}
 			>
 				{/* Top edge highlight */}

@@ -20,12 +20,11 @@ export interface UseDragInteractionOptions {
 export interface UseDragInteractionResult {
 	/** Whether currently dragging */
 	isDragging: boolean;
+	/** Ref to attach to the draggable handle element for touch events */
+	handleRef: RefObject<HTMLElement | null>;
 	/** Props to spread onto the draggable handle element */
 	handleProps: {
 		onMouseDown: (e: React.MouseEvent) => void;
-		onTouchStart: (e: React.TouchEvent) => void;
-		onTouchMove: (e: React.TouchEvent) => void;
-		onTouchEnd: (e: React.TouchEvent) => void;
 	};
 }
 
@@ -50,6 +49,7 @@ export function useDragInteraction(options: UseDragInteractionOptions): UseDragI
 	} = options;
 
 	const [isDragging, setIsDragging] = useState(false);
+	const handleRef = useRef<HTMLElement | null>(null);
 
 	// Track position and velocity for momentum calculation
 	const lastPositionRef = useRef(0);
@@ -163,6 +163,39 @@ export function useDragInteraction(options: UseDragInteractionOptions): UseDragI
 		};
 	}, [isDragging, handleDragMove, handleDragEnd]);
 
+	// Touch event handlers (element-level with passive: false to allow preventDefault)
+	useEffect(() => {
+		const element = handleRef.current;
+		if (!element) return;
+
+		const handleTouchStart = (e: TouchEvent) => {
+			e.stopPropagation();
+			handleDragStart(e.touches[0].clientX);
+		};
+
+		const handleTouchMove = (e: TouchEvent) => {
+			e.preventDefault();
+			e.stopPropagation();
+			handleDragMove(e.touches[0].clientX);
+		};
+
+		const handleTouchEnd = (e: TouchEvent) => {
+			e.stopPropagation();
+			handleDragEnd();
+		};
+
+		// Attach with passive: false to allow preventDefault
+		element.addEventListener("touchstart", handleTouchStart, { passive: true });
+		element.addEventListener("touchmove", handleTouchMove, { passive: false });
+		element.addEventListener("touchend", handleTouchEnd, { passive: true });
+
+		return () => {
+			element.removeEventListener("touchstart", handleTouchStart);
+			element.removeEventListener("touchmove", handleTouchMove);
+			element.removeEventListener("touchend", handleTouchEnd);
+		};
+	}, [handleDragStart, handleDragMove, handleDragEnd]);
+
 	// Handle props for the draggable element
 	const handleMouseDown = useCallback((e: React.MouseEvent) => {
 		e.preventDefault();
@@ -170,29 +203,11 @@ export function useDragInteraction(options: UseDragInteractionOptions): UseDragI
 		handleDragStart(e.clientX);
 	}, [handleDragStart]);
 
-	const handleTouchStart = useCallback((e: React.TouchEvent) => {
-		e.stopPropagation();
-		handleDragStart(e.touches[0].clientX);
-	}, [handleDragStart]);
-
-	const handleTouchMove = useCallback((e: React.TouchEvent) => {
-		e.preventDefault();
-		e.stopPropagation();
-		handleDragMove(e.touches[0].clientX);
-	}, [handleDragMove]);
-
-	const handleTouchEnd = useCallback((e: React.TouchEvent) => {
-		e.stopPropagation();
-		handleDragEnd();
-	}, [handleDragEnd]);
-
 	return {
 		isDragging,
+		handleRef,
 		handleProps: {
 			onMouseDown: handleMouseDown,
-			onTouchStart: handleTouchStart,
-			onTouchMove: handleTouchMove,
-			onTouchEnd: handleTouchEnd,
 		},
 	};
 }

@@ -59,7 +59,7 @@ export function GlassSlider({ opacity = 1, onSlideComplete, config: configOverri
 	});
 
 	// Drag interaction
-	const { isDragging, handleProps } = useDragInteraction({
+	const { isDragging, handleRef, handleProps } = useDragInteraction({
 		trackRef,
 		handleWidth: config.handleWidth,
 		trackPadding: config.padding,
@@ -131,6 +131,7 @@ export function GlassSlider({ opacity = 1, onSlideComplete, config: configOverri
 				{...handleProps}
 			>
 				<SliderHandle
+					ref={handleRef as React.RefObject<HTMLDivElement>}
 					config={config}
 					position={position}
 					isDragging={isDragging}

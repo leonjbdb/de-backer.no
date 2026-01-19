@@ -1,6 +1,6 @@
 "use client";
 
-import { CSSProperties } from "react";
+import { CSSProperties, forwardRef } from "react";
 import { glassStyles, combineGlassStyles, handleColors, animationTimings } from "../../styles";
 import { SliderConfig } from "../../types";
 
@@ -10,9 +10,6 @@ interface SliderHandleProps {
 	isDragging: boolean;
 	isHovering: boolean;
 	onMouseDown: (e: React.MouseEvent) => void;
-	onTouchStart: (e: React.TouchEvent) => void;
-	onTouchMove: (e: React.TouchEvent) => void;
-	onTouchEnd: (e: React.TouchEvent) => void;
 	onMouseEnter?: () => void;
 	onMouseLeave?: () => void;
 }
@@ -20,19 +17,17 @@ interface SliderHandleProps {
 /**
  * SliderHandle - The draggable handle component
  * Follows Single Responsibility Principle - only renders the handle
+ * Uses forwardRef to allow parent to attach touch event listeners with passive: false
  */
-export function SliderHandle({
+export const SliderHandle = forwardRef<HTMLDivElement, SliderHandleProps>(function SliderHandle({
 	config,
 	position,
 	isDragging,
 	isHovering,
 	onMouseDown,
-	onTouchStart,
-	onTouchMove,
-	onTouchEnd,
 	onMouseEnter,
 	onMouseLeave,
-}: SliderHandleProps) {
+}, ref) {
 	const borderRadius = config.handleHeight / 2;
 	const handleLeft = `calc(${config.padding}px + ${position} * (100% - ${config.handleWidth}px - ${config.padding * 2}px))`;
 	const arrowRotation = -(position * 180);
@@ -64,10 +59,8 @@ export function SliderHandle({
 
 	return (
 		<div
+			ref={ref}
 			onMouseDown={onMouseDown}
-			onTouchStart={onTouchStart}
-			onTouchMove={onTouchMove}
-			onTouchEnd={onTouchEnd}
 			onMouseEnter={onMouseEnter}
 			onMouseLeave={onMouseLeave}
 			style={handleStyle}
@@ -93,4 +86,4 @@ export function SliderHandle({
 			</svg>
 		</div>
 	);
-}
+});
